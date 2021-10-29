@@ -1,8 +1,127 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Common test setup
 
 set -euo pipefail
+declare -A -g shell_options=()
+while read -a arr -r; do
+  # shellcheck disable=SC2209
+  shell_options["${arr[2]}"]=set
+done < <(set +o)
+while read -a arr -r; do
+  shell_options["${arr[0]}"]=opt
+done < <(shopt)
+
+# Returns if the specified shell option is enabled.
+# Arguments:
+#   1 - complete shell option name
+shell_option_enabled() {
+  case ${shell_options[$1]} in
+    set)
+      while read -a arr -r; do
+        [ "${arr[2]}" = "$1" ] || continue
+        [ "${arr[1]}" = "-o" ]
+        return
+      done < <(set +o)
+      ;;
+    opt)
+      shopt -q "$1"
+      ;;
+    *)
+      fail "Unknown shell option '$1'"
+      ;;
+  esac
+}
+
+# Enables the specified shell option.
+# Arguments:
+#   1 - complete shell option name
+enable_shell_option() {
+  case ${shell_options[$1]} in
+    set)
+      set -o "$1"
+      ;;
+    opt)
+      shopt -s "$1"
+      ;;
+    *)
+      fail "Unknown shell option '$1'"
+      ;;
+  esac
+}
+
+# Enables the specified shell option.
+# Arguments:
+#   1 - complete shell option name
+disable_shell_option() {
+  case ${shell_options[$1]} in
+    set)
+      set +o "$1"
+      ;;
+    opt)
+      shopt -u "$1"
+      ;;
+    *)
+      fail "Unknown shell option '$1'"
+      ;;
+  esac
+}
+
+# Runs the specified command line with a defined a shell option state.
+#   1 - +|- complete option name; - enables and + disables the option
+#   * - command line
+with_shell_option() {
+  local name=${1?shell option name missing} result=0
+  shift
+  case $name in
+    -*)
+      if shell_option_enabled "${name:1}"; then
+        "$@" || result=$?
+      else
+        enable_shell_option "${name:1}"
+        "$@" || result=$?
+        disable_shell_option "${name:1}"
+      fi
+      ;;
+    +*)
+      if shell_option_enabled "${name:1}"; then
+        disable_shell_option "${name:1}"
+        "$@" || result=$?
+        enable_shell_option "${name:1}"
+      else
+        "$@" || result=$?
+      fi
+      ;;
+    *)
+      fail "Shell option '$1' must be either prefixed with - or +"
+      ;;
+  esac
+  return "$result"
+}
+
+# Provides access to the specified internal Bats function
+# by re-declaring with with a `batsw` prefix (instead of `bats`).
+#
+# Arguments:
+#   1 - name of the re-declared function (default: calling function name)
+# shellcheck disable=SC2120
+batsw_redeclare() {
+  local batsw_name=${1:-${FUNCNAME[1]}} declaration
+  local bats_name=${batsw_name/#batsw_/bats_}
+  local raw_name=${bats_name/#bats_/batsw__}
+  declaration=$(
+    source /opt/bats/lib/bats-core/test_functions.bash
+    declare -f "$bats_name"
+  )
+  eval "${declaration/#"$bats_name"/"$raw_name"}"
+  eval "$batsw_name() { with_shell_option '+no""unset' $raw_name \"\${@}\" || true; }"
+}
+
+# Provides access to `bats_separate_lines`.
+batsw_separate_lines() {
+  [ "${batsw_separate_lines-}" ] || batsw_redeclare
+  batsw_separate_lines "$@"
+}
 
 # Delegates to echo just as if called directory
 # **unless** a Bats test is being executed
@@ -185,7 +304,7 @@ assert_file_owner_group() {
   local group="$3"
 
   local flag='-l'
-  [[ ! "${user%-}" =~ ^[0-9]*$ ]] || [[ ! "${group%-}" =~ ^[0-9]*$ ]] || flag='-n'
+  [[ ! ${user%-} =~ ^[0-9]*$ ]] || [[ ! ${group%-} =~ ^[0-9]*$ ]] || flag='-n'
   [ ! "${user-}" = - ] || user='.*'
   [ ! "${group-}" = - ] || group='.*'
 
@@ -283,16 +402,26 @@ fixture() {
   fixture "$1" "${dir%/*}"
 }
 
-# Creates a copy of the given fixture at the given target.
-# See `fixture`
-#
+# Copies the source of the specified fixture to the specified target.
 # Arguments:
 #   1 - name of the fixture
 #   2 - target
 # Outputs:
 #   STDERR - details on failure
+# See also:
+#   cp(1) `fixture`
 cp_fixture() {
-  cp "$(fixture "${1:?}")" "${2:?}"
+  [ $# -ge 2 ] || fail "${FUNCNAME[0]} needs at least two arguments: fixture and target"
+  local -a args=()
+  while (($#)); do
+    if [ $# -eq 2 ]; then
+      args+=("$(fixture "${1:?}")")
+    else
+      args+=("${1:?}")
+    fi
+    shift
+  done
+  cp "${args[@]}"
 }
 
 # Creates a temporary file containing the specified lines and prints it path.
@@ -303,21 +432,21 @@ cp_fixture() {
 #   *  - lines to add to the file
 # Output:
 #   STDOUT - path of the created file
-mkfile() {
+mkfile() { #TODO remove
   local file
   file="$(mktemp "$BATS_TEST_TMPDIR/XXXXXX")"
   touch "$file"
   [ ! "${1-}" = '+x' ] || {
     chmod +x "$file" && shift
   }
-  while(($#)); do
+  while (($#)); do
     case $1 in
-    -)
-      cat - >>"$file" && shift
-      ;;
-    *)
-      printf '%s\n' "$1" >>"$file" && shift
-      ;;
+      -)
+        cat - >>"$file" && shift
+        ;;
+      *)
+        printf '%s\n' "$1" >>"$file" && shift
+        ;;
     esac
   done
   printf '%s\n' "$file"
@@ -360,7 +489,7 @@ test_min_bats_version() {
   version=$(bats --version) 2>/dev/null
   version=${version#Bats }
   (
-    IFS='.' read -r -a parts <<< "$version"
+    IFS='.' read -r -a parts <<<"$version"
     [ "${parts[0]-0}" -lt 2 ] || return 0 # if >= 2.x.x 👍
     [ "${parts[0]-0}" -eq 1 ] || return 1 # if <= 0.x.x 👎
     [ "${parts[1]-0}" -ge 4 ] || return 1 # if >= 1.4.x 👍

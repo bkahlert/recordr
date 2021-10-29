@@ -114,7 +114,7 @@ invoke_chafa() {
   opts+=("--duration" "$duration")
   if [ "${meta-}" ]; then
     print_options "${opts[@]}" "${args[@]}"
-    sleep 2
+    sleep 5
   fi
   printf '%s' "$home$clear"
   "${chafa[@]}" "${opts[@]}" "${args[@]}"
@@ -145,7 +145,7 @@ chafa_demo() {
   fi
   invoke_chafa \
     --colors full \
-    --color-space "din99d" \
+    --color-space "rgb" \
     --duration "$duration" \
     --fill "stipple+diagonal+geometric+ascii+quad+block" \
     --format "symbols" \
@@ -154,10 +154,37 @@ chafa_demo() {
      "$@"
 }
 
+# Executes chafa with the specified arguments in different variations.
+simple_chafa_demo() {
+  declare duration=1
+  invoke_chafa \
+    --meta \
+    --colors none \
+    --color-space "rgb" \
+    --duration "$duration" \
+    --fill "ascii" \
+    --format "symbols" \
+    --size "${cols}x$((cols / 2))" \
+    --speed 0.25 \
+    --symbols "ascii" \
+     "$@"
+  [ "${TESTING-}" ] || invoke_chafa \
+    --meta \
+    --colors full \
+    --color-space "rgb" \
+    --duration "$duration" \
+    --fill "stipple+diagonal+geometric+ascii+quad+block" \
+    --format "symbols" \
+    --size "${cols}x$((cols / 2))" \
+    --speed 0.25 \
+    --symbols "stipple+diagonal+geometric+ascii+quad+block" \
+     "$@"
+}
+
 tput civis
 printf %s "$clear"
 for image in "${!images[@]}"; do
-  chafa_demo "${images[$image]}"
+  simple_chafa_demo "${images[$image]}"
 done
 
 exit 0

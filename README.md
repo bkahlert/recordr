@@ -1,7 +1,8 @@
 # bkahlert/recordr [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/recordr/build?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/recordr/actions/workflows/build-and-publish.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/recordr?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/recordr) [![Repository Size](https://img.shields.io/github/license/bkahlert/recordr?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/recordr/blob/master/LICENSE)
 
 ## About
-**Recordr** is an automated terminal session recorder and to SVG converter. 
+**Recordr** is an automated terminal session recorder and SVG converter which,
+by default, records and converts all files located at `./rec` and places them at `./docs`.
 
 [![recorded terminal session demonstrating the recordr tool](docs/demo.svg "Recordr Demo")  
 Recordr Demo](../../raw/master/docs/demo.svg)
@@ -48,7 +49,6 @@ docker buildx bake image-all
 * [GitHub Container Registry](https://github.com/users/bkahlert/packages/container/package/recordr) `ghcr.io/bkahlert/recordr`
 
 Following platforms for this image are available:
-
 * linux/amd64
 * linux/arm64/v8
 
@@ -67,7 +67,7 @@ The following options can be used to customize the conversion:
  - `--parallel` — maximum number of conversions that run at once; 0 will run as many conversions as possible (default: 4)
  - `--restart-delay` — number of seconds until the animation restart (default: 5)
  - `--build-dir` — path to store (intermediate) build artifacts in (default: build/rec/)
- - `--term-profile` — path to the terminal profile to use for conversion (default: auto)
+ - `--term-profile` — path to the terminal profile to use for conversion (default: auto) [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
  - `--hide-recording` — flag that if specified will not show the recording process (default during batch mode)
  - `--delete-build` — flag that if specified will keep delete intermediary build files on completion
 
@@ -84,7 +84,7 @@ recordr [OPTIONS] [FILE...]
 ```shell
 docker run -it --rm \ 
   -e TERM=$TERM \
-  -v "$PWD:$PWD" \
+  -v "$PWD":"$PWD" \
   -w "$PWD" \
   bkahlert/recordr [OPTIONS] [FILE...]
 ```
@@ -95,13 +95,12 @@ This image can be configured using the following options of which all but `APP_U
 You should go for build arguments if you want to set custom defaults you don't intend to change (often). Environment variables will overrule any existing
 configuration on each container start.
 
-* `APP_USER` Name of the main user (default: recordr).
-* `APP_GROUP` Name of the main user's group (default: recordr).
-
-* `TZ` Timezone the container runs in (default: `UTC`)
-* `LANG` Language/locale to use (default: `C.UTF-8`)
-* `PUID` User ID of the `libguestfs` user (default: `1000`)
-* `PGID` Group ID of the `libguestfs` group (default: `1000`)
+- `APP_USER` Name of the main user (default: recordr).
+- `APP_GROUP` Name of the main user's group (default: recordr).
+- `TZ` Timezone the container runs in (default: `UTC`)
+- `LANG` Language/locale to use (default: `C.UTF-8`)
+- `PUID` User ID of the `libguestfs` user (default: `1000`)
+- `PGID` Group ID of the `libguestfs` group (default: `1000`)
 
 ```shell
 # Build single image with build argument TZ
@@ -151,7 +150,7 @@ docker run -it --rm \
   -e NODE_OPTIONS="--max-old-space-size=16384" \
   -e TERM="$TERM" \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$PWD:$PWD" \
+  -v "$PWD":"$PWD" \
   -w "$PWD" \
   bkahlert/recordr:edge
 ```
@@ -175,3 +174,5 @@ MIT. See [LICENSE](LICENSE) for more details.
 - [ ] parametrize version
 - [ ] auto-build recording with workflow
 - [ ] recordrw - wrapper
+- [ ] fix README.md performance
+- [ ] fix build

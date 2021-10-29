@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load helpers/common.sh
+  load ../helpers/common.sh
   load_lib support
   load_lib assert
 }

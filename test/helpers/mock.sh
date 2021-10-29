@@ -38,25 +38,6 @@ SVG_FILE
 '
 }
 
-# Creates shell script that runs the specified rec file.
-# Additional arguments will be written to the shell script, that is,
-# they must be valid shell script code in order to not break the script.
-recording() {
-  local -a parts=()
-  parts+=('#!/usr/bin/env bash')
-  parts+=('
-rec() {
-  [[ ! "${1-}" =~ -[0-9]+ ]] || shift
-  ("$@" 2>&1) || true
-}
-')
-  for part in "${@:2}"; do
-    parts+=("$part")
-  done
-  parts+=("$(cat "$BATS_CWD/rec/${1?rec file missing}")")
-  mkfile "${parts[@]}"
-}
-
 # Invokes `recordr` with the specified arguments but mocked dependencies `asciinema` and `svg-term`.
 mocked_recordr() {
   local -a parts=(

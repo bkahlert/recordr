@@ -27,21 +27,21 @@
 
 set -euo pipefail
 
-export SUCCESS=0
-export ERROR=1
-export ERROR_NO_SOURCING=2
-export ERROR_NEGATIVE_USER_RESPONSE=10
+declare -r -g EX_OK=0
+declare -r -g EX_GENERAL=1
+declare -r -g EX_NO_SOURCING=2
+declare -r -g EX_NEG_USR_RESP=10
 
-export TMPDIR=${TMPDIR:-/tmp}
-export LOGR_VERSION=SNAPSHOT
-export BANR_CHAR=▔
-export MARGIN='   '
-export LF=$'\n'
+declare -r -g TMPDIR=${TMPDIR:-/tmp}
+declare -r -g LOGR_VERSION=SNAPSHOT
+declare -r -g BANR_CHAR=▔
+declare -r -g MARGIN='   '
+declare -r -g LF=$'\n'
 
-declare -g esc_osc="\e]"     # operating system command
-declare -g esc_st="\e\\\\"   # string terminator
-export ANSI_REMOVAL_SUBSTITUTION="s/\(\
-${esc_osc}8;\([^;]\)*;[^"$'\e'"]*${esc_st}\
+declare -r -g ESC_OSC="\e]"     # operating system command
+declare -r -g ESC_ST="\e\\\\"   # string terminator
+declare -r -g ESC_PATTERN="s/\(\
+${ESC_OSC}8;\([^;]\)*;[^"$'\e'"]*${ESC_ST}\
 \|\
 \e[\[(][(0-9;]*[a-zA-Z]\
 \)//g;"
@@ -244,7 +244,7 @@ util() {
       [ $# -gt 0 ] || failr "format missing" --usage "$usage" --stacktrace -- "$@"
       # shellcheck disable=SC2059
       printf -v util_text "$@"
-      util_text=$(printf '%b' "$util_text" | sed -e "$ANSI_REMOVAL_SUBSTITUTION")
+      util_text=$(printf '%b' "$util_text" | sed -e "$ESC_PATTERN")
       #      printf -v util_text "$@"
       #      printf -v util_text '%b' "$util_text"
       #      util_text=${util_text//$'\033'[\[(][(0-9;]*[a-zA-Z]/X}
@@ -505,7 +505,7 @@ util() {
 # Arguments:
 #   * - args passed to the spinner function.
 spinner() {
-  [ "${tty_connected-}" ] || return "$SUCCESS"
+  [ "${tty_connected-}" ] || return "$EX_OK"
   local usage="start | is_active | stop"
   [ $# -gt 0 ] || failr "command missing" --usage "$usage" --stacktrace -- "$@"
   case $1 in
@@ -712,12 +712,12 @@ logr() {
      error       Log an error
      failure     Log an error and terminate
 '
-      exit "$SUCCESS"
+      exit "$EX_OK"
       ;;
     _init)
       shift
-      local abort=$ERROR_NEGATIVE_USER_RESPONSE shared='code=$?; logr _cleanup; if [  "${code-}" -eq 0 ]; then trap - ERR TERM INT; exit 0; fi'
-      trap "$shared"'; [ ! $code = '"$abort"' ] || return '"$abort"'; logr _cleanup; failr --name "${0##*/}" --code "$code" "${FUNCNAME[0]:-main}("${BASH_SOURCE[0]:-?}":"${LINENO:-?}"): $BASH_COMMAND"' ERR
+      local abort=$EX_NEG_USR_RESP shared='code=$?; logr _cleanup; if [  "${code-}" -eq 0 ]; then trap - ERR TERM INT; exit 0; fi'
+      trap "$shared"'; [ ! $code = '"$abort"' ] || return '"$abort"'; logr _cleanup; failr --name "${0##*/}" --code "$code" "${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?}): $BASH_COMMAND"' ERR
       # shellcheck disable=SC2064
       trap "$shared" EXIT
       trap "$shared"'; failr --name "${0##*/}" --code "$code" Terminated' TERM
@@ -744,8 +744,8 @@ logr() {
       util -v _rs print --icon "$1" "${@:2}"
       [ ! "${inline-}" ] || _rs="${_rs# }"
       echo "$_rs" >&2
-      [ ! "$1" = "error" ] || return "$ERROR"
-      [ ! "$1" = "failure" ] || exit "$ERROR"
+      [ ! "$1" = "error" ] || return "$EX_GENERAL"
+      [ ! "$1" = "failure" ] || exit "$EX_GENERAL"
       ;;
     list)
       shift
@@ -767,7 +767,7 @@ logr() {
       # shellcheck disable=SC1003
       if [ "${tty_connected-}" ]; then
         local params='' # colon separated list of key-value pairs
-        local start="${esc_osc}8;${params};%s${esc_st}" end="${esc_osc}8;;${esc_st}"
+        local start="${ESC_OSC}8;${params};%s${ESC_ST}" end="${ESC_OSC}8;;${ESC_ST}"
         util -v _link_link print --icon link "${start}%s${end}" "$url" "${text:-$url}"
       else
         if [ "${text-}" ]; then
@@ -850,13 +850,13 @@ logr() {
         util -v _rs print --icon task "$logr_task"
         [ ! "${inline-}" ] || _rs="${_rs# }"
         echo "$_rs"
-        return "$SUCCESS"
+        return "$EX_OK"
       fi
 
       local logr_tasks && util -v logr_tasks fit_concat nested "$logr_parent_tasks" "$logr_task"
 
-      local task_file && task_file=${TMPDIR:-/tmp}/logr.$$.task
-      local log_file && log_file=${TMPDIR:-/tmp}/logr.$$.log
+      local task_file && task_file=${TMPDIR%/}/logr.$$.task
+      local log_file && log_file=${TMPDIR%/}/logr.$$.log
 
       local task_exit_status=0
       if [ ! "$logr_parent_tasks" ]; then
@@ -887,7 +887,7 @@ logr() {
         if [ ! "$task_exit_status" -eq 0 ]; then
           util reprint --icon error "$(cat "$task_file")"
           sed \
-            -e "$ANSI_REMOVAL_SUBSTITUTION" \
+            -e "$ESC_PATTERN" \
             -e 's/^/'"$MARGIN${esc_red-}"'/;' \
             -e 's/$/'"${esc_reset-}"'/;' \
             "$log_file"
@@ -927,7 +927,7 @@ prompt4() {
    Type:
      Y/n    "Do you want to continue?"
 '
-      exit "$SUCCESS"
+      exit "$EX_OK"
       ;;
     Y/n)
       shift
@@ -959,7 +959,7 @@ prompt4() {
 
       if [ "${REPLY-}" = no ]; then
         util print "$_prompt4_format" no --icon error
-        exit "$ERROR_NEGATIVE_USER_RESPONSE"
+        exit "$EX_NEG_USR_RESP"
       fi
 
       util print "$_prompt4_format" yes --icon success
@@ -968,7 +968,7 @@ prompt4() {
       ;;
     _read_answer)
       shift
-      trap 'REPLY=no; trap - INT TERM; return '"$ERROR" INT TERM
+      trap 'REPLY=no; trap - INT TERM; return '"$EX_GENERAL" INT TERM
       read -n 1 -r -s -p "${1?prompt missing}"
       if [ "$REPLY" = $'\E' ] || [ "$REPLY" = 'n' ]; then
         REPLY=no
@@ -1014,9 +1014,6 @@ tracr() {
 
 # Initializes environment
 main() {
-
-  TMPDIR=${TMPDIR%/}
-
   esc --init
 
   local r=${esc_reset-}
@@ -1078,8 +1075,8 @@ main() {
 
   [ "${TESTING-}" ] || logr _init
 
-  [ ! "${RECORDING-}" ] || return "$SUCCESS"
-  [[ " $* " == *" -!- "* ]] || return "$SUCCESS"
+  [ ! "${RECORDING-}" ] || return "$EX_OK"
+  [[ " $* " == *" -!- "* ]] || return "$EX_OK"
   [[ ! " $* " == *" -h "* ]] || logr _help
   [[ ! " $* " == *" --help "* ]] || logr _help
 
@@ -1093,7 +1090,7 @@ main() {
     "${esc_yellow-}"'source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/RELATIVE_PATH/logr.sh"'"${esc_reset-}"
   logr info "%s\n%s\n" "And for the more adventurous:" \
     "${esc_yellow-}"'source <(curl -LfsS https://git.io/logr.sh)'"${esc_reset-}"
-  exit "$ERROR_NO_SOURCING"
+  exit "$EX_NO_SOURCING"
 }
 
 main "$@"

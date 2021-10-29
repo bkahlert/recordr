@@ -1,13 +1,13 @@
 #!/usr/bin/env bats
 
 setup() {
-  load helpers/common.sh
+  load ../helpers/common.sh
   load_lib support
   load_lib assert
   load_lib file
 
-  load helpers/mock.sh
-  load helpers/svg.sh
+  load ../helpers/mock.sh
+  load ../helpers/svg.sh
 
   cd "$BATS_TEST_TMPDIR" || exit
   mkdir rec

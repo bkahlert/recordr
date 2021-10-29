@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Recordr — automated terminal session recorder and to SVG converter
+# Recordr — automated terminal session recorder and SVG converter
 # https://github.com/bkahlert/recordr
 #
 # MIT License
@@ -86,7 +86,7 @@ declare -A opts=(
   ['columns']=132                                                             # number of columns to use for recording and conversion
   ['rows']=25                                                                 # number of rows to use for recording and conversion
   ['restart-delay']=5                                                         # number of seconds until the animation restart
-  ['term-profile']=auto                                                       # path to the terminal profile to use for conversion
+  ['term-profile']=auto                                                       # path to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
   ['parallel']=$(grep 2>/dev/null -c ^processor /proc/cpuinfo || printf %s 4) # maximum number of conversions that run at once; 0 will run as many conversions as possible
 )
 [ ! "${TESTING-}" ] || opts['restart-delay']=1
@@ -217,11 +217,11 @@ set -- "${args[@]}"
 [ -d "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is no directory"
 [ -r "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is not readable"
 
-[ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" || failr "build-dir \`${opts['build-dir']}\` could not be created"
+[ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" || failr "build-dir \`${opts['build-dir']}\` ($PWD/${opts['build-dir']}) could not be created: $(id -u) --- $(ls -lisanR "$PWD")"
 [ -r "${opts['build-dir']}" ] || failr "build-dir \`${opts['build-dir']}\` is not readable"
 
 [ ! "${opts['out-dir']}" ] || {
-  [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" || failr "out-dir \`${opts['out-dir']}\` could not be created"
+  [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" || failr "out-dir \`${opts['out-dir']}\` ($PWD/${opts['out-dir']}) could not be created"
   [ -w "${opts['out-dir']}" ] || failr "out-dir \`${opts['out-dir']}\` is not writable"
 }
 
@@ -319,9 +319,7 @@ rec() {
   local result=0 col esc_hpa_col tmp
   tmp=$(mktemp)
 
-  {
-    "$@" || result=$? || true
-  } | tee "$tmp"
+  ("$@") || result=$? || true | tee "$tmp"
 
   # add eventually missing new line
   [ "$(tail -c 1 "$tmp" | tr -Cd "\n" | tr "\n" 'n')" ] || {

@@ -6,10 +6,33 @@ setup() {
   load_lib assert
 
   load helpers/mock.sh
+
+  cd "$BATS_TEST_DIRNAME" || exit
+}
+
+# Creates shell script that runs the specified rec file.
+# Additional arguments will be written to the shell script, that is,
+# they must be valid shell script code in order to not break the script.
+recording() {
+  file="$(mktemp "$BATS_TEST_TMPDIR/XXXXXX")"
+  {
+    echo '#!/usr/bin/env bash'
+    echo '
+    rec() {
+      [[ ! "${1-}" =~ -[0-9]+ ]] || shift
+      ("$@") || true
+    }
+    '
+    for part in "${@:2}"; do
+      echo "$part"
+    done
+    cat "$BATS_CWD/rec/${1?rec file missing}"
+  } >"$file"
+  echo "$file"
 }
 
 @test "should have working demo.rec" {
-  run bash "$(recording "demo.rec")"
+  TERM=xterm run bash "$(recording "demo.rec")"
 
   assert_success
   assert_line " 💡 This is a [31m● rec(B[m file."
@@ -17,15 +40,15 @@ setup() {
 }
 
 @test "should have working recordr.rec" {
-  run bash "$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")"
 
-  assert_success
+  run bash -c "cd '$BATS_CWD' && bash '$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
+
   assert_output "\
  ℹ terminal profile search directory: rec/
  ✔ terminal profile: rec/.iterm"''"colors
- ● RECORDING rec/logr.rec
- ◕ CONVERTING build/rec/logr.cast
- ✔ COMPLETED build/rec/logr.svg"
+ ● RECORDING rec/demo.rec
+ ◕ CONVERTING build/rec/demo.cast
+ ✔ COMPLETED build/rec/demo.svg"
 }
 
 @test "should have working logr.rec" {
@@ -35,12 +58,27 @@ setup() {
   assert_line ' ℹ Lorem ipsum dolor sit amet.'
   assert_line ' ✔ 2 seconds of work'
   assert_line ' ! Extracting link from sources and placing it in the top right corner. ↗︎'
-  assert_line ' … Cleaning up'
+  assert_line --partial ' … Cleaning up'
 }
 
 @test "should have working chafa.rec" {
-  run bash "$(recording "chafa.rec")"
+  TERM=xterm run bash "$(recording "chafa.rec")"
 
   assert_success
-  assert_output "$(cat "$(fixture nyan-cat.ansi)")"
+  while read -r line; do
+    assert_output --partial "$line"
+  done < <(
+    cat <<'NYAN-CAT'
+i>::::::~iiiiii|::::::.______________,
+_,zzzzzzT______3zzzzz~jMMMMMMMM0MMMMMMf
+00MMM00MM0000000MMM0M'JMMMMMMMM"w_~4MMf._y
+MMMMMMMMMMMMMMMMP'_^MlJMMMMMMMM #Mm____mM0
+&&~~~~~~'&&&&&&Z'\\\_:JMMM0MMM !M0f~M@*0f~m
+my_______mmmmmm_____}:JMWMMMMM !Mm-4#^w}-wM
+^^MMMMMMP^^^^^^^M0MMP'JMM0MMMMm,~0_______~
+uTyyyyyy3uuuuuw_'gy~we "~~~~~~~~'     :
+  .......     `~_..,.   ..       .   .
+                 ^ .
+NYAN-CAT
+  )
 }

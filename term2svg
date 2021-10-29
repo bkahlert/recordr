@@ -17,6 +17,6 @@ docker run -it --rm --name "recordr-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc 
   -e PGID="$(id -g)" \
   -e NODE_OPTIONS="--max-old-space-size=16384" \
   -e TERM="$TERM" \
-  -v "$PWD:$PWD" \
+  -v "$PWD":"$PWD" \
   -w "$PWD" \
   bkahlert/recordr

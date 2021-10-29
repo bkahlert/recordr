@@ -6,43 +6,49 @@ setup() {
 }
 
 teardown() {
-  docker rm --force "$BATS_TEST_NAME" >/dev/null 2>&1 || true
+  image_cleanup
 }
 
 @test "should convert rec dir by default" {
-  local container && container=$(docker run -d --name "$BATS_TEST_NAME" "$BUILD_TAG")
-  assert_within 10s -- assert_container_log "$container" --partial 'recordr failed: rec-dir `rec/` does not exist'
+  mkdir rec && cp_fixture test.rec rec
+  image "$BUILD_TAG"
+  assert_line '●◕ BATCH RECORD AND CONVERT'
+  assert_line ' ℹ recordings directory: rec/'
 }
 
 @test "should display help if specified" {
-  run docker run --name "$BATS_TEST_NAME" "$BUILD_TAG" --help
+  image "$BUILD_TAG" --help
   # TODO correct version
   assert_line '   ▔▔▔▔▔▔▔ RECORDR SNAPSHOT'
   assert_line '     --rec-dir              path to prefix specified rec files with (default: rec/)'
 }
 
 @test "should print output to STDOUT" {
-  local output && output=$(docker run --name "$BATS_TEST_NAME" -w /tmp "$BUILD_TAG" --rec-dir /tmp 2>/dev/null)
+  mkdir rec
+  image --stdout-only "$BUILD_TAG"
   assert_output "\
 ●◕ BATCH RECORD AND CONVERT
- ℹ recordings directory: /tmp
+ ℹ recordings directory: rec/
  ✔ BATCH COMPLETED"
 }
 
 @test "should print logs to STDERR" {
-  local output && output=$(docker run --name "$BATS_TEST_NAME" -w /tmp "$BUILD_TAG" --rec-dir /tmp 2>&1 1>/dev/null)
-  assert_output --partial "updating timezone to UTC"
-  assert_output --partial "terminal profile search directory"
+  mkdir rec
+  image --stderr-only "$BUILD_TAG"
+  assert_line --partial "updating timezone to UTC"
+  assert_line --partial "terminal profile search directory"
 }
 
 @test "should use rich console if terminal is connected" {
-  TERM=xterm run docker run --tty --name "$BATS_TEST_NAME" -w /tmp "$BUILD_TAG" --rec-dir /tmp
+  mkdir rec
+  TERM=xterm image --tty "$BUILD_TAG"
   assert_line --partial ''
   refute_line " ⚙ updating timezone to UTC"
 }
 
 @test "should use plain console if no terminal is connected" {
-  run docker run --name "$BATS_TEST_NAME" -w /tmp "$BUILD_TAG" --rec-dir /tmp
+  mkdir rec
+  TERM=xterm image "$BUILD_TAG"
   refute_line --partial ''
   assert_line "   updating timezone to UTC"
   assert_line " ✔ updating timezone to UTC"

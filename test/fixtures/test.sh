@@ -25,9 +25,7 @@ rec() {
   local result=0 col esc_hpa_col tmp
   tmp=$(mktemp)
 
-  {
-    "$@" || result=$? || true
-  } | tee "$tmp"
+  ("$@") || result=$? || true | tee "$tmp"
 
   # add eventually missing new line
   [ "$(tail -c 1 "$tmp" | tr -Cd "\n" | tr "\n" 'n')" ] || {
