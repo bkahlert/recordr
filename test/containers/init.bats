@@ -3,7 +3,6 @@
 
 setup() {
   load helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
-  skip
 }
 
 teardown() {
@@ -11,6 +10,7 @@ teardown() {
 }
 
 @test "should persist APP_USER and APP_GROUP in entrypoint.sh" {
-  run docker run --name "$BATS_TEST_NAME" --entrypoint bash "$BUILD_TAG" -c 'cat /usr/local/sbin/entrypoint.sh'
+  run docker run --name "$BATS_TEST_NAME" -w /tmp "$BUILD_TAG" --rec-dir /tmp
+  run docker cp "${BATS_TEST_NAME}:/usr/local/sbin/entrypoint.sh" -
   assert_line '  local -r app_user=recordr app_group=recordr'
 }

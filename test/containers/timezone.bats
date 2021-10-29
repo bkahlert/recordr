@@ -3,7 +3,6 @@
 
 setup() {
   load helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
-  skip
 }
 
 teardown() {
@@ -11,11 +10,13 @@ teardown() {
 }
 
 @test "should change timezone to UTC by default" {
-  local output && output="$(docker run --name "$BATS_TEST_NAME" "$BUILD_TAG" date +"%Z")"
-  assert_output 'UTC'
+  mv "$(mkfile 'date +"%Z"')" test.rec
+  local output && output="$(docker run --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec)"
+  assert_output --partial 'UTC'
 }
 
 @test "should change timezone to specified timezone" {
-  local output && output="$(docker run -e "TZ=CEST" --name "$BATS_TEST_NAME" "$BUILD_TAG" date +"%Z")"
-  assert_output 'CEST'
+  mv "$(mkfile 'date +"%Z"')" test.rec
+  local output && output="$(docker run -e "TZ=CEST" --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec)"
+  assert_output --partial 'CEST'
 }

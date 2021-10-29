@@ -188,7 +188,7 @@ wait_for_process() {
   local -r -i max_time_wait="${2:-30}"
   local waited_sec=0
   while ! pgrep "$process_name" >/dev/null; do
-    logr running "waiting $((max_time_wait - waited_sec))s for process ${process_name}" >&2
+    logr task "waiting $((max_time_wait - waited_sec))s for process ${process_name}" >&2
     sleep 1
     waited_sec=$((waited_sec + 1))
     [ "$waited_sec" -lt "$max_time_wait" ] || logr fail "$process_name did not start in time"

@@ -3,7 +3,7 @@
 
 setup() {
   load helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
-  skip
+  cp_fixture test.rec .
 }
 
 teardown() {
@@ -11,21 +11,21 @@ teardown() {
 }
 
 @test "should change user ID to 1000 by default" {
-  run docker run --name "$BATS_TEST_NAME" "$BUILD_TAG" id
-  assert_line --partial 'uid=1000'
+  run docker run --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec
+  assert_file_owner_group "$PWD/build/rec/test.sh" '1000' -
 }
 
 @test "should change user ID to specified ID" {
-  run docker run -e PUID=2000 --name "$BATS_TEST_NAME" "$BUILD_TAG" id
-  assert_line --partial 'uid=2000'
+  run docker run -e PUID=2000 --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec
+  assert_file_owner_group "$PWD/build/rec/test.sh" '2000' -
 }
 
 @test "should change group ID to 1000 by default" {
-  run docker run --name "$BATS_TEST_NAME" "$BUILD_TAG" id
-  assert_line --partial 'gid=1000'
+  run docker run --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec
+  assert_file_owner_group "$PWD/build/rec/test.sh" - '1000'
 }
 
 @test "should change group ID to specified ID" {
-  run docker run -e PGID=2000 --name "$BATS_TEST_NAME" "$BUILD_TAG" id
-  assert_line --partial 'gid=2000'
+  run docker run -e PGID=2000 --name "$BATS_TEST_NAME" -v "$PWD:/tmp" -w /tmp "$BUILD_TAG" --rec-dir /tmp test.rec
+  assert_file_owner_group "$PWD/build/rec/test.sh" - '2000'
 }

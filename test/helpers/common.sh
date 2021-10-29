@@ -165,13 +165,17 @@ assert_container_status() {
 # Tests the owner of a file.
 # The original implementation suffers from its reliance on sudo.
 # see https://github.com/bats-core/bats-file#assert_file_permission
+#
+# Accepts either user and group name or user ID and group ID.
+#
 # Globals:
 #   none
 # Arguments:
-#   1 - Docker container ID
-#   2 - expected value
+#   1 - file
+#   2 - expected user; use - to not check the owning user
+#   3 - expected group; use - to not check the owning group
 # Returns:
-#   0 - statuses equal
+#   0 - file owner equal
 #   1 - otherwise
 # Outputs:
 #   STDERR - details, on failure
@@ -180,7 +184,12 @@ assert_file_owner_group() {
   local user="$2"
   local group="$3"
 
-  run ls -l "$file" # total 10444 -rw-r--r-- 1 tester tester 10692675 Sep 25 17:29 core.gz
+  local flag='-l'
+  [[ ! "${user%-}" =~ ^[0-9]*$ ]] || [[ ! "${group%-}" =~ ^[0-9]*$ ]] || flag='-n'
+  [ ! "${user-}" = - ] || user='.*'
+  [ ! "${group-}" = - ] || group='.*'
+
+  run ls "$flag" "$file" # total 10444 -rw-r--r-- 1 tester tester 10692675 Sep 25 17:29 core.gz
 
   local s='\s+'
   local regexp='.*\d+'                             # hard links
