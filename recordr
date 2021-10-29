@@ -1,0 +1,450 @@
+#!/usr/bin/env bash
+#
+# Recordr — automated terminal session recorder and to SVG converter
+# https://github.com/bkahlert/recordr
+#
+# MIT License
+#
+# Copyright (c) 2021 Dr. Björn Kahlert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+set -euo pipefail
+
+export RECORDR_VERSION=SNAPSHOT
+source logr.sh
+
+# An associative array of supported terminal profiles.
+# Keys are terminal profile file extensions and their values
+# the ones supported by the `term` option of `svg-term`.
+declare -A supported_profiles=(
+  ['js']=hyper
+  ['iterm''colors']=iterm2
+  ['colorscheme']=konsole
+  ['colors']=remmina
+  ['terminal']=terminal
+  ['config']=terminator
+  ['config_0']=tilda
+  ['theme']=xfce
+  ['x''rdb']=xterm
+  ['x''resources']=xresources
+)
+
+# Attempts to find a terminal profile in the specified path.
+# Arguments:
+#   1 - optional path to use (default: ./)
+# Returns:
+#   0 - always unless an unexpected error occurs
+# Outputs:
+#   STDOUT - the found terminal profile resp. the first one if multiple were found
+#   STDERR - warning if multiple terminal profiles were found
+find_term_profile() {
+  local path=${1:-./}
+  logr info "terminal profile search directory: $path" >&2
+
+  local query='' ext
+  for ext in "${!supported_profiles[@]}"; do
+    [ ! "$query" ] || query+=' -o'
+    query+=" -i""name *.$ext"
+  done
+
+  declare -a profiles=()
+  # shellcheck disable=SC2086
+  while IFS= read -r -d $'\0'; do
+    profiles+=("$REPLY")
+  done < <(find "$path" -type f \( $query \) -print0)
+
+  [ ! "${#profiles[@]}" -gt 1 ] || logr warn "Found multiple terminal profiles: ${profiles[*]/#/$'\n   ▪ '}" >&2
+  [ "${#profiles[@]}" -eq 0 ] || {
+    logr success "terminal profile: ${profiles[0]}" >&2
+    echo "${profiles[0]}"
+  }
+}
+
+declare -A opts=(
+  ['rec-dir']=rec/                                                            # path to prefix specified rec files with
+  ['build-dir']=build/rec/                                                    # path to store (intermediate) build artifacts in
+  ['out-dir']=docs/                                                           # path to copy the created SVG files to
+  ['term']=xterm-256color                                                     # value to use for the TERM environmental variable
+  ['indicator']=RECORDING                                                     # name of the environmental variable set during recording
+  ['columns']=132                                                             # number of columns to use for recording and conversion
+  ['rows']=25                                                                 # number of rows to use for recording and conversion
+  ['restart-delay']=5                                                         # number of seconds until the animation restart
+  ['term-profile']=auto                                                       # path to the terminal profile to use for conversion
+  ['parallel']=$(grep 2>/dev/null -c ^processor /proc/cpuinfo || printf %s 4) # maximum number of conversions that run at once; 0 will run as many conversions as possible
+)
+[ ! "${TESTING-}" ] || opts['restart-delay']=1
+declare -A flags=(
+  ['delete-build']=false   # flag that if specified will keep delete intermediary build files on completion
+  ['hide-recording']=false # flag that if specified will not show the recording process (default during batch mode)
+)
+
+declare raw=("$@") args=() usage='[OPTIONS] [FILE...]'
+while (($#)); do
+  case $1 in
+    -h | --help)
+      # Parses this script for a line documenting the parameter and returns the comment.
+      describe() { sed -En "/[[:space:]]+\['$1'].*#/p" "${BASH_SOURCE[0]}" | sed -E 's/[^#]*#[[:space:]]*(.*)$/\1/g'; }
+      declare margin="$MARGIN  " options=() col_width=20
+      for opt in "${!opts[@]}"; do
+        options+=("$(printf -- '--%s%*s' "$opt" $((col_width - ${#opt})) '')" "$(describe "$opt") (default: ${opts[$opt]})")
+      done
+      for flag in "${!flags[@]}"; do
+        options+=("$(printf -- '--%s%*s' "$flag" $((col_width - ${#flag})) '')" "$(describe "$flag")")
+      done
+      printf '\n   %s\n\n   Usage: recordr %s%s' "$(banr --static "recordr" "$RECORDR_VERSION")" "$usage" "
+
+${MARGIN}Options:
+$(printf "$margin"'%s %s\n' "${options[@]}")
+
+${MARGIN}Files:
+${margin}Specify any number of files relative to the \`rec-dir\`.
+${margin}If no files are specified, all files located in the \`rec-dir\` are processed.
+"
+      exit 0
+      ;;
+
+    # options
+    --rec-dir=*)
+      opts['rec-dir']=${1#*=} && shift
+      ;;
+    --rec-dir)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['rec-dir']=$2 && shift 2
+      ;;
+    --build-dir=*)
+      opts['build-dir']=${1#*=} && shift
+      ;;
+    --build-dir)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['build-dir']=$2 && shift 2
+      ;;
+    --out-dir=*)
+      opts['out-dir']=${1#*=} && shift
+      ;;
+    --out-dir)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['out-dir']=$2 && shift 2
+      ;;
+    --indicator=*)
+      opts['indicator']=${1#*=} && shift
+      ;;
+    --indicator)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['indicator']=$2 && shift 2
+      ;;
+    --columns=*)
+      opts['columns']=${1#*=} && shift
+      ;;
+    --columns)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['columns']=$2 && shift 2
+      ;;
+    --rows=*)
+      opts['rows']=${1#*=} && shift
+      ;;
+    --rows)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['rows']=$2 && shift 2
+      ;;
+    --restart-delay=*)
+      opts['restart-delay']=${1#*=} && shift
+      ;;
+    --restart-delay)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['restart-delay']=$2 && shift 2
+      ;;
+    --term=*)
+      opts['term']=${1#*=} && shift
+      ;;
+    --term)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['term']=$2 && shift 2
+      ;;
+    --term-profile=*)
+      opts['term-profile']=${1#*=} && shift
+      ;;
+    --term-profile)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['term-profile']=$2 && shift 2
+      ;;
+    --parallel=*)
+      opts['parallel']=${1#*=} && shift
+      ;;
+    --parallel)
+      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      opts['parallel']=$2 && shift 2
+      ;;
+
+      # flags
+    --delete-build)
+      flags['delete-build']=true && shift
+      ;;
+    --hide-recording)
+      flags['hide-recording']=true && shift
+      ;;
+
+      # unknown arguments
+    --*)
+      failr "unknown option $1" --usage "$usage" -- "${raw[@]}"
+      ;;
+
+      # positional arguments
+    *)
+      args+=("$1") && shift
+      ;;
+  esac
+done
+set -- "${args[@]}"
+
+[ -e "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` does not exist"
+[ -d "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is no directory"
+[ -r "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is not readable"
+
+[ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" || failr "build-dir \`${opts['build-dir']}\` could not be created"
+[ -r "${opts['build-dir']}" ] || failr "build-dir \`${opts['build-dir']}\` is not readable"
+
+[ ! "${opts['out-dir']}" ] || {
+  [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" || failr "out-dir \`${opts['out-dir']}\` could not be created"
+  [ -w "${opts['out-dir']}" ] || failr "out-dir \`${opts['out-dir']}\` is not writable"
+}
+
+infocmp -T "${opts['term']}" &>/dev/null || failr 'unknown terminal `'"${opts['term']}"'`'
+
+[ ! "${opts['term-profile']}" = "auto" ] || opts['term-profile']=$(find_term_profile "${opts['rec-dir']}") || {
+  failr "unexpected error while looking for a terminal profile" -- "$@"
+}
+[ -e "${opts['term-profile']}" ] || opts['term-profile']=''
+
+# Prints a command line that calls this binary with `options` as its specified arguments.
+inv() {
+  printf '%b' "$0"
+  for opt in "${!opts[@]}"; do
+    printf ' --%b=%b' "$opt" "${opts[$opt]}"
+  done
+  for flag in "${!flags[@]}"; do
+    [ ! "${flags[$flag]}" = true ] || printf ' --%b' "$flag"
+  done
+}
+
+# no args -> invoke recordr with all rec files in `rec` directory
+[ $# -eq 0 ] && {
+  flags['hide-recording']=true
+  echo "${esc_red-}●${esc_green-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
+  logr info "recordings directory: ${opts['rec-dir']}"
+  inv=$(inv)
+  #shellcheck disable=SC2086
+  (cd "${opts['rec-dir']}" && find . -name '*.rec' -print0) | xargs -0 -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
+  logr success "${esc_bold-}BATCH COMPLETED${esc_reset-}"
+  exit 0
+}
+
+# multiple args -> invoke recordr with each arg separately
+[ $# -gt 1 ] && {
+  flags['hide-recording']=true
+  echo "${esc_red-}●${esc_green-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
+  logr info "recordings directory: ${opts['rec-dir']}"
+  logr info "files: ${*}"
+  inv=$(inv)
+  #shellcheck disable=SC2086
+  (while (($#)); do
+    printf '%s\n' "$1" && shift
+  done) | xargs -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
+  wait
+  logr success "${esc_bold-}BATCH COMPLETED${esc_reset-}"
+  exit 0
+}
+
+# one arg left = relative path to rec file
+declare rec_file=${1#./}                                        # e.g. foo
+declare real_rec_file=${opts['rec-dir']%/}/${rec_file%.rec}.rec # e.g. rec/foo.rec
+[ -e "$real_rec_file" ] || failr "rec-file \`$real_rec_file\` does not exist"
+[ -r "$real_rec_file" ] || failr "rec-file \`$real_rec_file\` is not readable"
+
+declare build_file=${opts['build-dir']%/}/${rec_file#/} # e.g. build/rec/foo.rec
+declare recordable_file=${build_file%.rec}.sh           # e.g. build/rec/foo.sh
+declare cast_file=${build_file%.rec}.cast               # e.g. build/rec/foo.rec
+declare svg_file=${build_file%.rec}.svg                 # e.g. build/rec/foo.svg
+mkdir -p "${build_file%/*}"
+
+[ ! "${opts['out-dir']-}" ] || {
+  declare out_file=${opts['out-dir']%/}/${rec_file#/} # e.g. docs/foo.rec
+  declare out_svg_file=${out_file%.rec}.svg           # e.g. docs/foo.svg
+  mkdir -p "${out_svg_file%/*}"
+}
+
+echo " ${esc_red-}●${esc_reset-} ${esc_bold-}RECORDING ${real_rec_file#./}${esc_reset-}"
+{
+  echo '#!/usr/bin/env bash'
+  [ ! "${opts['indicator']-}" ] || echo "export ${opts['indicator']}=1"
+  [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
+  cat <<'INSTRUMENTATION'
+# Simulates a user typing in the specified command and executes it.
+rec() {
+  local prompt="❱ "
+  printf '%s%s' "$(tput 'set''af' 7)$prompt" "$(tput 'c''norm')"
+  sleep 1
+  local i j s min=10
+  printf -v s '%q ' "$@"
+  s=${s:0:$((${#s} -1))}
+  [ ! "${TESTING-}" ] || min=99999
+  # rec -n suppresses output of the first n arguments
+  [[ ! "${1-}" =~ -[0-9]+ ]] || {
+    s=${*:$((${1#-} +2))}
+    shift
+  }
+  for ((i = 0, j = 0; i < ${#s}; i = i + j, j = "$min" + (RANDOM % 5))); do
+    printf '%s' "${s:i:j}" && sleep .04
+  done
+  sleep .5; tput civis
+  sleep .5; tput 'c''norm'
+  printf "%s%s%s\n" "$(tput 'set''af' 8)$(tput hpa 0)$prompt" "$s" "$(tput sgr0)"
+  tput civis
+  local result=0 col esc_hpa_col tmp
+  tmp=$(mktemp)
+
+  {
+    "$@" || result=$? || true
+  } | tee "$tmp"
+
+  # add eventually missing new line
+  [ "$(tail -c 1 "$tmp" | tr -Cd "\n" | tr "\n" 'n')" ] || {
+    printf "%s%s%s\n" "$(tput 'sm''so')" "␊" "$(tput sgr0)"
+  }
+  rm -- "$tmp"
+
+  # highlight non-0 exit code
+  [ "$result" -eq 0 ] || {
+INSTRUMENTATION
+  cat <<INSTRUMENTATION
+    col=\$((${opts['columns']-80} -"\${#result}" -3))
+INSTRUMENTATION
+  cat <<'INSTRUMENTATION'
+    esc_hpa_col=$(tput hpa "$col" || tput ch "$col")
+    printf "%s%s%s ↩ %s\n" "$(tput cuu 1)${esc_hpa_col-}" "$(tput bold)$(tput 'set''af' 1)" "$result" "$(tput sgr0)"
+  }
+  echo
+}
+# END OF INSTRUMENTATION
+INSTRUMENTATION
+  cat "$real_rec_file"
+  [ "${opts['restart-delay']:=0}" -eq 0 ] || {
+    echo
+    printf "# RESTART IN %s SECONDS(S)\n" "${opts['restart-delay']}"
+    echo 'tput civis'
+    for ((i = 0; i < "${opts['restart-delay']}"; i++)); do
+      echo "printf '$((${opts['restart-delay']} - i))%s' \"\$(tput hpa 0)\""
+      printf "sleep .5; %s; sleep .5; %s;\n" 'tput c''norm' 'tput civis'
+    done
+  }
+} >"$recordable_file"
+
+[ ! -e "$cast_file" ] || rm -- "$cast_file"
+(
+  [ ! "${flags['hide-recording']}" = true ] || exec &>/dev/null
+  HISTFILE='' \
+    HISTIGNORE='*' \
+    TERM=${opts['term']-} \
+    asciinema rec \
+    --command "bash '$recordable_file'" \
+    --quiet \
+    "$cast_file"
+)
+
+echo " ${esc_green-}◕${esc_reset-} ${esc_bold-}CONVERTING ${cast_file#./}${esc_reset-}"
+declare -a svg_term_args=()
+[ ! -e "$svg_file" ] || rm -- "$svg_file"
+[ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
+[ ! "${opts['rows']-}" ] || svg_term_args+=("--height" "${opts['rows']}")
+[ ! "${opts['term-profile']-}" ] || svg_term_args+=(
+  "--term" "${supported_profiles["${opts['term-profile']##*.}"]}"
+  "--profile" "$(cd "${opts['term-profile']%/*}" && pwd)/${opts['term-profile']##*/}"
+)
+
+svg-term \
+  --in "$cast_file" \
+  --out "$svg_file" \
+  --padding-x 20 \
+  --padding-y 20 \
+  ${svg_term_args[@]+"${svg_term_args[@]}"} \
+  --window
+
+[ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
+cp "$svg_file" "$svg_file.0"
+
+# post-process SVG
+# replace deprecated xmlns:xlink by xlink, see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
+declare svg css=''
+svg=$(
+  sed -E \
+    -e 's, xmlns:xlink="http://www.w3.org/1999/xlink",,g' \
+    -e 's,xlink:href,href,g' \
+    -e 's, font-family="[^"]*", class="container",g' \
+    "$svg_file" \
+    | tee "$svg_file.1"
+) || touch "$svg_file.err"
+
+# highlight links
+declare term_link='https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda'
+svg=$(
+  title='Displayed as link in selected terminal emulators'
+  printf '%s' "$svg" \
+    | sed -E 's,(<text[^>]*>((http|https|mailto):[^<]*)</text>),<a href="'"$term_link"'"><title>'"$title"'</title>\1</a>,g' \
+    | tee "$svg_file.2"
+) || touch "$svg_file.err"
+
+# highlight inserted line feeds
+svg=$(
+  printf '%s' "$svg" \
+    | sed -E 's,<path[^>]*>(<text[^>]*>)␊<,\1<tspan class=\"inserted-lf\">⮐</tspan><,g' \
+    | tee "$svg_file.3"
+) || touch "$svg_file.err"
+css+=".inserted-lf{fill:#999999;fill-opacity:.75;font-variant-position:sub;font-size:75%}"
+
+# patch fonts
+declare fonts
+printf -v fonts ",'%s'" "JetBrains Mono" "Monaco" "Con""sol""as" "Men""lo" "Bitstream Vera Sans Mono" "Luc""ida Console" \
+  "Ubuntu Mono" "Mes""lo for Powerline" "Mes""lo LG M for Powerline" "Powerline Symbols" "Monospace" "monospace"
+css+=".container{font-family:${fonts:1}}"
+
+# patch otherwise missing line at terminal end
+css+=".container>g{animation-play-state:running}"
+css+=".container_end{fill:whitesmoke;mix-blend-mode:soft-light;opacity:0;transition:opacity .2s ease-in-out}"
+css+=".container:hover>g{animation-play-state:paused}"
+css+=".container{pointer-events:all}"
+css+=".container:hover{cursor:wait}"
+css+=".container:hover>.container_end{opacity:1}"
+declare container_end='<svg height="100%" width="100%" viewBox="0 0 100 100" class="container_end">'
+container_end+='<text text-anchor="middle" alignment-baseline="central">'
+container_end+='<tspan y="50" x="50" style="font-size: 50px;">❚❚</tspan></text></svg>'
+svg="${svg/%<\/g><\/svg><\/svg>/$container_end<\/g><\/svg><\/svg>}"
+
+# patch otherwise missing line at terminal end
+css+=".container>g>svg>svg>*{transform: scaleY(.95);}"
+
+# write back SVG
+printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
+
+[ -e "$svg_file" ] || failr "svg-file \`$svg_file\` unexpectedly missing" --stacktrace
+[ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
+[ ! "${out_svg_file-}" ] || [ "${flags['delete-build']}" = false ] || rm -- "$svg_file"
+[ "${flags['delete-build']}" = false ] || rm -- "$recordable_file" "$cast_file"
+logr success "${esc_bold-}COMPLETED ${svg_file#./}${esc_reset-}"
+
+# TODO add support for dim and italic

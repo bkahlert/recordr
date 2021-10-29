@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+declare cols=60
+declare -a images=("docs/ny""an-cat.gif")
+declare use_docker=true
+
+# Check if all images exists.
+# Checks for specified path and attempts to look in parent directory.
+for image in "${!images[@]}"; do
+  [ -f "${images[$image]}" ] || images[$image]="../${images[$image]}"
+  if [ ! -f "${images[$image]}" ]; then
+    echo "Can't find image ${images[$image]}"
+    exit 1
+  fi
+done
+
+# Append '-static' to filename if testing
+if [ "${TESTING-}" ]; then
+  for image in "${!images[@]}"; do
+    static_image="${images[$image]%.*}-static.${images[$image]##*.}"
+    [ ! -f "$static_image" ] || images[$image]=$static_image
+  done
+fi
+
+# ANSI constants
+# shellcheck disable=SC2155
+declare \
+  clear=$(tput clear) \
+  home=$(tput home) \
+  vpa0=$(tput vpa 1) \
+  hpa=$(tput hpa 2) \
+  bold=$(tput bold) \
+  underline=$(tput smul) \
+  highlight=$(tput setaf 4) \
+  el=$(tput el) \
+  reset=$(tput sgr0) \
+  chafa
+
+# Determine if to call chafa directory or using Docker.
+if chafa=("$(command -v chafa && [ ! "${use_docker-}" = true ])"); then
+  # shellcheck disable=SC2064
+  trap "printf %s '$(tput cnorm)'" EXIT
+else
+  declare -a mounts=()
+  for image in "${!images[@]}"; do
+    images[$image]="$(cd "${images[$image]%/*}" && pwd)/${images[$image]##*/}"
+    mounts+=("-v" "${images[$image]}:${images[$image]}")
+  done
+  declare container
+  container=$(
+    docker run \
+      --detach \
+      --name "chafa-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)" \
+      "${mounts[@]}" \
+      rafib/awesome-cli-binaries \
+      bash -c "while true; do sleep 1; done"
+  )
+  # shellcheck disable=SC2064
+  trap "printf %s '$(tput cnorm)'; docker rm --force '$container' &>/dev/null" EXIT
+  chafa=(docker exec --tty --env "TERM=$TERM" "$container" /opt/bin/chafa)
+fi
+
+# Prints the specified options.
+print_options() {
+  local idx option value extra url='https://hpjansson.org/chafa/' vpa
+  printf '%s%s%s          %s\n\n' "$home$clear$vpa0$hpa$bold$underline" "chafa" "$reset" ']8;;'"$url"''"\\""${url#*//}"']8;;\ [34m↗(B[m'
+  for ((idx = 1; idx <= $#; idx++)); do
+    vpa=$(tput vpa $((idx + 2)))
+    option=${!idx}
+    case ${!idx} in
+      --*)
+        vpa=$(tput vpa $(((idx / 2) + 3)))
+        option=${option#--}
+        idx=$((idx + 1))
+        value=${!idx}
+        extra=''
+        [ ! "${value:0:1}" = "-" ] || exit 3
+        [ ! "${option}" = "colors" ] || extra="$highlight"
+        [ ! "${option}" = "fill" ] || extra="$highlight"
+        [ ! "${option}" = "symbols" ] || extra="$highlight"
+        printf '%s%s%*s %s%s\n' "$vpa$hpa$el$extra" "$option" "$((24 - ${#option}))" '' "$value" "$reset"
+        ;;
+      *)
+        vpa=$(tput vpa $((($# / 2) + 4)))
+        printf '\n%s%s\n' "$vpa$hpa" "${option##*/}"
+        ;;
+    esac
+  done
+}
+
+# Executes chafa with optional meta data printed before each chafa invocation.
+invoke_chafa() {
+  local meta duration=1
+  local -a opts=() args=()
+  while (($#)); do
+    case $1 in
+      --meta)
+        meta=true && shift
+        ;;
+      --duration)
+        duration=$2 && shift 2
+        ;;
+      --*)
+        opts+=("$1" "$2") && shift 2
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+  opts+=("--duration" "$duration")
+  if [ "${meta-}" ]; then
+    print_options "${opts[@]}" "${args[@]}"
+    sleep 2
+  fi
+  printf '%s' "$home$clear"
+  "${chafa[@]}" "${opts[@]}" "${args[@]}"
+}
+
+# Executes invoke_chafa with different symbols.
+invoke_chafa_with_symbols() {
+  for symbols in "stipple" "diagonal" "ascii" "quad"; do
+    invoke_chafa \
+      --color-space "rgb" \
+      --fill "$symbols" \
+      --format "symbols" \
+      --size "${cols}x$((cols / 2))" \
+      --symbols "$symbols" \
+       "$@"
+  done
+}
+
+# Executes chafa with the specified arguments in different variations.
+chafa_demo() {
+  declare duration=5
+  if [ "${TESTING-}" ]; then
+    duration=1
+  else
+    invoke_chafa_with_symbols --meta --colors none "$@"
+    invoke_chafa_with_symbols --colors 2 "$@"
+    invoke_chafa_with_symbols --colors 16 "$@"
+  fi
+  invoke_chafa \
+    --colors full \
+    --color-space "din99d" \
+    --duration "$duration" \
+    --fill "stipple+diagonal+geometric+ascii+quad+block" \
+    --format "symbols" \
+    --size "${cols}x$((cols / 2))" \
+    --symbols "stipple+diagonal+geometric+ascii+quad+block" \
+     "$@"
+}
+
+tput civis
+printf %s "$clear"
+for image in "${!images[@]}"; do
+  chafa_demo "${images[$image]}"
+done
+
+exit 0

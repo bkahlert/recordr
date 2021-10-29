@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." || exit
+
+./recordr --rec-dir test/fixtures --build-dir test/fixtures --out-dir test/fixtures test.rec

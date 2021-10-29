@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# bashsupport disable=BP5008
+baz() {
+  # shellcheck disable=SC2059
+  [ $# -eq 0 ] || printf "$@"
+  exit 42
+}
+
+rec printf '%s\n' 'foo'
+rec printf '%s' 'bar'
+rec baz $'\n'
+rec baz ''
+rec baz

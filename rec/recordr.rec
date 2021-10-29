@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# shellcheck disable=SC1004
+rec -1 eval './recordr logr.rec'

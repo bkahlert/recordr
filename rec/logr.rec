@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Downloads the specified URL and prints the path of the successful download.
+download() {
+  #  source logr.sh && return
+  local url=${1?URL missing} lib
+  lib=$(mktemp "${TMPDIR%/}/logr.sh-XXXXXX")
+  # shellcheck disable=SC2064
+  rec echo "Downloading $url..." >&2
+  curl --location --fail --silent --show-error --output "$lib" "$url" || {
+    echo "Failed to download $url" && exit 1
+  }
+  echo "$lib"
+}
+
+# extract the lib URL from the comments section
+place_link() {
+  local lib=${1?lib missing} url
+  url=$(sed -nE -e "s/^#[[:space:]]*/   /" -e 's| *(https://.*)|\1|' -e "/https/p" "$lib" | head -n 1)
+  printf '%s%s%s' "$(tput cup 1 $((132 - ${#url} - 4)))" "$(logr link "$url")" "$(tput cup ${LINES-25} 0)"
+}
+
+declare lib
+lib=$(download "https://git.io/logr.sh")
+trap 'echo " … Cleaning up"; [ ! -e '"$lib"' ] || rm -- '"$lib"'; kill $$' EXIT
+# shellcheck disable=SC1090
+source "$lib"
+rec banr "logr demo"
+rec logr info "Lorem ipsum dolor sit amet."
+rec logr task "2 seconds of work" -- sleep 2
+rec logr warning "Extracting link from sources and placing it in the top right corner. ↗︎"
+place_link "$lib"

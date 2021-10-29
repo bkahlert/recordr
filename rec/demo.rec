@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo
+
+# prints the passed arguments in bold
+format_command() {
+  printf '%s%s%s\n' "$(tput bold)" "$*" "$(tput sgr0)"
+}
+
+# prints the passed arguments indented
+indent_command() {
+  local indent='    ' lf=$'\n'
+  echo "$indent${*//$lf/$lf$indent}"
+}
+
+# displays the cursor and waits for the specified amount of seconds
+pause() {
+  local duration=${1:-2}
+  [ ! "${TESTING-}" ] || duration=0
+  tput 'cn''orm'
+  echo && sleep "$duration"
+}
+
+echo " 💡 This is a $(tput setaf 1)● rec$(tput sgr0) file."
+pause 4
+
+echo "The line above was actually printed because of the following invocation: "
+indent_command "$(format_command 'echo " 💡 This is a $(tput set''af 1)● rec$(tput sgr0) file."')"
+pause 8
+
+echo "To demonstrate a certain command you can type: "
+indent_command "$(format_command 'rec my_command arg1 arg2')"
+pause 8
+
+echo "Of course, for that to work 'my_command' needs to be declared. Let's do it: "
+indent_command "$(format_command 'my_command() {
+  echo "doing stuff with" "$@"
+}')"
+# sample function
+my_command() {
+  echo "doing stuff with" "$@"
+}
+pause 8
+
+printf %s "Next we will invoke: $(format_command 'my_command arg1 arg2')"
+pause 4
+my_command arg1 arg2
+pause 8
+
+printf %s "And now: $(format_command 'rec my_command arg1 arg2')"
+pause 4
+rec my_command arg1 arg2
+pause 8
+
+printf %s "Non-zero return values and \"missing\" line breaks are highlighted by default: $(format_command rec exit 42)"
+pause 8
+rec exit 42
+pause 8
+
+echo "That's all about it."
+echo "A $(tput setaf 1)● rec$(tput sgr0) file is nothing but a shell script with the option to use the 'rec' function."
+pause 8
+
+echo "As soon as a rec file terminates a countdown will start."
+echo "The moment it hits 0 the animation plays again."
+pause 8
