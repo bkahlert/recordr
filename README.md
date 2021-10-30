@@ -173,6 +173,6 @@ MIT. See [LICENSE](LICENSE) for more details.
 
 - [ ] parametrize version
 - [ ] auto-build recording with workflow
-- [ ] recordrw - wrapper
 - [ ] fix README.md performance
 - [ ] fix build
+- [ ] GitHub Action

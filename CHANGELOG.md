@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 ### Added
-*none*
+- `recordrw` self-contained wrapper to run Recordr with minimal effort
 
 ### Changed
 *none*

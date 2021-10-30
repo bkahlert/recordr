@@ -1,4 +1,4 @@
-FROM docker:20.10.8-alpine3.14
+FROM docker:20.10.10-alpine3.14
 
 # build time only options
 ARG APP_USER=recordr
