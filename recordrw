@@ -31,6 +31,7 @@ docker run --tty --rm --name "recordr-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -d
   -e PGID="$(id -g)" \
   -e NODE_OPTIONS="--max-old-space-size=16384" \
   -e TERM="$TERM" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD":"$PWD" \
   -w "$PWD" \
   bkahlert/recordr:edge "$@"
