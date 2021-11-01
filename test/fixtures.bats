@@ -20,7 +20,7 @@ recording() {
     echo '
     rec() {
       [[ ! "${1-}" =~ -[0-9]+ ]] || shift
-      ("$@") || true
+      "$@"
     }
     '
     for part in "${@:2}"; do
@@ -40,7 +40,6 @@ recording() {
 }
 
 @test "should have working recordr.rec" {
-
   run bash -c "cd '$BATS_CWD' && bash '$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
   assert_output "\
@@ -57,7 +56,7 @@ recording() {
   assert_line '   ▔▔▔▔▔▔▔ LOGR DEMO'
   assert_line ' ℹ Lorem ipsum dolor sit amet.'
   assert_line ' ✔ 2 seconds of work'
-  assert_line ' ! Extracting link from sources and placing it in the top right corner. ↗︎'
+  assert_line --partial 'Extracting link from sources and placing it in the top right corner. ↗︎'
   assert_line --partial ' … Cleaning up'
 }
 

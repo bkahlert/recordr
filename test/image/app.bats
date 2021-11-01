@@ -2,6 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
+  # TODO correct version
   load helpers/setup.sh "${BUILD_TAG:?unspecified image to test}"
   load ../helpers/svg.sh
 }
@@ -10,7 +11,7 @@ teardown() {
   image_cleanup
 }
 
-@test "should print help" {
+@test "should print help if specified" {
   mkdir rec
   image --stdout-only -i "$BUILD_TAG" --help
   assert_success
@@ -26,6 +27,13 @@ teardown() {
    Files:
      Specify any number of files relative to the `rec-dir`.
      If no files are specified, all files located in the `rec-dir` are processed.'
+}
+
+@test "should convert rec dir by default" {
+  mkdir rec && cp_fixture test.rec rec
+  image "$BUILD_TAG"
+  assert_line '●◕ BATCH RECORD AND CONVERT'
+  assert_line ' ℹ recordings directory: rec/'
 }
 
 @test "should record all rec files in rec directory and convert them to svg in docs directory" {

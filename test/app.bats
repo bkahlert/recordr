@@ -1,13 +1,13 @@
 #!/usr/bin/env bats
 
 setup() {
-  load ../helpers/common.sh
+  load helpers/common.sh
   load_lib support
   load_lib assert
   load_lib file
 
-  load ../helpers/mock.sh
-  load ../helpers/svg.sh
+  load helpers/mock.sh
+  load helpers/svg.sh
 
   cd "$BATS_TEST_TMPDIR" || exit
   mkdir rec
@@ -132,29 +132,13 @@ setup() {
   TESTING='' run mocked_recordr --build-dir . test.rec
   # shellcheck disable=SC2034
   output=$(cat test.sh)
-  assert_output --partial "# RESTART IN 5 SECONDS(S)"
-  assert_output --partial "tput civis"
-  assert_output --partial "printf '5%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
-  assert_output --partial "printf '4%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
-  assert_output --partial "printf '3%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
-  assert_output --partial "printf '2%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
-  assert_output --partial "printf '1%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
+  assert_output --partial "trap 'count_down 5' EXIT"
 }
 @test "should use specified restart-delay" {
   TESTING='' run mocked_recordr --build-dir . --restart-delay 2 test.rec
   # shellcheck disable=SC2034
   output=$(cat test.sh)
-  assert_output --partial "# RESTART IN 2 SECONDS(S)"
-  assert_output --partial "tput civis"
-  assert_output --partial "printf '2%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
-  assert_output --partial "printf '1%s' \"\$(tput hpa 0)\""
-  assert_output --partial "sleep .5; tput c""norm; sleep .5; tput civis;"
+  assert_output --partial "trap 'count_down 2' EXIT"
 }
 
 @test "should find term-profile by default" {

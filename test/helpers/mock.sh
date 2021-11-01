@@ -5,8 +5,9 @@ asciinema_mock() {
   echo 'asciinema() {
   printenv > '"$BATS_TEST_TMPDIR"'/asciinema.env
   echo "$@" > '"$BATS_TEST_TMPDIR"'/asciinema.args
-  local cast_file=${!#}
-  cat <<CAST_FILE >$cast_file
+  local last_index=$#
+  local cast_file=${!last_index}
+  cat <<"CAST_FILE" >"$cast_file"
 '"$(cat "$(fixture "${1?path missing}")")"'
 CAST_FILE
 }
@@ -30,7 +31,7 @@ svg-term_mock() {
         shift
     esac
   done
-  cat <<SVG_FILE >$svg_file
+  cat <<"SVG_FILE" >"$svg_file"
 '"$(cat "$(fixture "${1?path missing}")")"'
 SVG_FILE
 }

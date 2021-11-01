@@ -25,8 +25,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set -euo pipefail
-
 export RECORDR_VERSION=SNAPSHOT
 source logr.sh
 
@@ -68,9 +66,9 @@ find_term_profile() {
   # shellcheck disable=SC2086
   while IFS= read -r -d $'\0'; do
     profiles+=("$REPLY")
-  done < <(find "$path" -type f \( $query \) -print0)
+  done < <(find "${path%/}" -type f \( $query \) -print0)
 
-  [ ! "${#profiles[@]}" -gt 1 ] || logr warn "Found multiple terminal profiles: ${profiles[*]/#/$'\n   ▪ '}" >&2
+  [ ! "${#profiles[@]}" -gt 1 ] || logr warn "multiple terminal profiles found: ${profiles[*]/#/$'\n   ▪ '}" >&2
   [ "${#profiles[@]}" -eq 0 ] || {
     logr success "terminal profile: ${profiles[0]}" >&2
     echo "${profiles[0]}"
@@ -125,70 +123,70 @@ ${margin}If no files are specified, all files located in the \`rec-dir\` are pro
       opts['rec-dir']=${1#*=} && shift
       ;;
     --rec-dir)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['rec-dir']=$2 && shift 2
       ;;
     --build-dir=*)
       opts['build-dir']=${1#*=} && shift
       ;;
     --build-dir)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['build-dir']=$2 && shift 2
       ;;
     --out-dir=*)
       opts['out-dir']=${1#*=} && shift
       ;;
     --out-dir)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['out-dir']=$2 && shift 2
       ;;
     --indicator=*)
       opts['indicator']=${1#*=} && shift
       ;;
     --indicator)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['indicator']=$2 && shift 2
       ;;
     --columns=*)
       opts['columns']=${1#*=} && shift
       ;;
     --columns)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['columns']=$2 && shift 2
       ;;
     --rows=*)
       opts['rows']=${1#*=} && shift
       ;;
     --rows)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['rows']=$2 && shift 2
       ;;
     --restart-delay=*)
       opts['restart-delay']=${1#*=} && shift
       ;;
     --restart-delay)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['restart-delay']=$2 && shift 2
       ;;
     --term=*)
       opts['term']=${1#*=} && shift
       ;;
     --term)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['term']=$2 && shift 2
       ;;
     --term-profile=*)
       opts['term-profile']=${1#*=} && shift
       ;;
     --term-profile)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['term-profile']=$2 && shift 2
       ;;
     --parallel=*)
       opts['parallel']=${1#*=} && shift
       ;;
     --parallel)
-      [ "${2-}" ] || failr "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
+      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
       opts['parallel']=$2 && shift 2
       ;;
 
@@ -202,7 +200,7 @@ ${margin}If no files are specified, all files located in the \`rec-dir\` are pro
 
       # unknown arguments
     --*)
-      failr "unknown option $1" --usage "$usage" -- "${raw[@]}"
+      logr error --code "$EX_USAGE" "unknown option $1" --usage "$usage" -- "${raw[@]}"
       ;;
 
       # positional arguments
@@ -213,22 +211,24 @@ ${margin}If no files are specified, all files located in the \`rec-dir\` are pro
 done
 set -- "${args[@]}"
 
-[ -e "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` does not exist"
-[ -d "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is no directory"
-[ -r "${opts['rec-dir']}" ] || failr "rec-dir \`${opts['rec-dir']}\` is not readable"
+[ -e "${opts['rec-dir']}" ] || logr error --code "$EX_USAGE" "rec-dir \`${opts['rec-dir']}\` does not exist"
+[ -d "${opts['rec-dir']}" ] || logr error --code "$EX_USAGE" "rec-dir \`${opts['rec-dir']}\` is no directory"
+[ -r "${opts['rec-dir']}" ] || logr error --code "$EX_NOINPUT" "rec-dir \`${opts['rec-dir']}\` is not readable"
 
-[ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" || failr "build-dir \`${opts['build-dir']}\` ($PWD/${opts['build-dir']}) could not be created: $(id -u) --- $(ls -lisanR "$PWD")"
-[ -r "${opts['build-dir']}" ] || failr "build-dir \`${opts['build-dir']}\` is not readable"
+[ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
+  || logr error --code "$EX_USAGE" "build-dir \`${opts['build-dir']}\` ($PWD/${opts['build-dir']}) could not be created: $(id -u) --- $(ls -lisanR "$PWD")"
+[ -r "${opts['build-dir']}" ] || logr error --code "$EX_NOINPUT" "build-dir \`${opts['build-dir']}\` is not readable"
 
 [ ! "${opts['out-dir']}" ] || {
-  [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" || failr "out-dir \`${opts['out-dir']}\` ($PWD/${opts['out-dir']}) could not be created"
-  [ -w "${opts['out-dir']}" ] || failr "out-dir \`${opts['out-dir']}\` is not writable"
+  [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" \
+    || logr error --code "$EX_CANTCREAT" "out-dir \`${opts['out-dir']}\` ($PWD/${opts['out-dir']}) could not be created"
+  [ -w "${opts['out-dir']}" ] || logr error --code "$EX_CANTCREAT" "out-dir \`${opts['out-dir']}\` is not writable"
 }
 
-infocmp -T "${opts['term']}" &>/dev/null || failr 'unknown terminal `'"${opts['term']}"'`'
+infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unknown terminal `'"${opts['term']}"'`'
 
 [ ! "${opts['term-profile']}" = "auto" ] || opts['term-profile']=$(find_term_profile "${opts['rec-dir']}") || {
-  failr "unexpected error while looking for a terminal profile" -- "$@"
+  logr error --code "$EX_USAGE" "unexpected error while looking for a terminal profile" -- "$@"
 }
 [ -e "${opts['term-profile']}" ] || opts['term-profile']=''
 
@@ -245,11 +245,12 @@ inv() {
 
 # no args -> invoke recordr with all rec files in `rec` directory
 [ $# -eq 0 ] && {
+  declare inv
   flags['hide-recording']=true
-  echo "${esc_red-}●${esc_green-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
+  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
   logr info "recordings directory: ${opts['rec-dir']}"
   inv=$(inv)
-  #shellcheck disable=SC2086
+  #shellcheck disable=SC2086,SC2128
   (cd "${opts['rec-dir']}" && find . -name '*.rec' -print0) | xargs -0 -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
   logr success "${esc_bold-}BATCH COMPLETED${esc_reset-}"
   exit 0
@@ -257,12 +258,13 @@ inv() {
 
 # multiple args -> invoke recordr with each arg separately
 [ $# -gt 1 ] && {
+  declare inv
   flags['hide-recording']=true
-  echo "${esc_red-}●${esc_green-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
+  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
   logr info "recordings directory: ${opts['rec-dir']}"
   logr info "files: ${*}"
   inv=$(inv)
-  #shellcheck disable=SC2086
+  #shellcheck disable=SC2086,SC2128
   (while (($#)); do
     printf '%s\n' "$1" && shift
   done) | xargs -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
@@ -272,10 +274,11 @@ inv() {
 }
 
 # one arg left = relative path to rec file
-declare rec_file=${1#./}                                        # e.g. foo
-declare real_rec_file=${opts['rec-dir']%/}/${rec_file%.rec}.rec # e.g. rec/foo.rec
-[ -e "$real_rec_file" ] || failr "rec-file \`$real_rec_file\` does not exist"
-[ -r "$real_rec_file" ] || failr "rec-file \`$real_rec_file\` is not readable"
+declare rec_file=${1#./}                                         # e.g. foo.bar
+declare real_rec_file=${opts['rec-dir']%/}/$rec_file             # e.g. rec/foo.bar
+[ -f "$real_rec_file" ] || real_rec_file=${real_rec_file%.*}.rec # e.g. rec/foo.rec
+[ -e "$real_rec_file" ] || logr error --code "$EX_USAGE" "rec-file \`$real_rec_file\` does not exist"
+[ -r "$real_rec_file" ] || logr error --code "$EX_NOINPUT" "rec-file \`$real_rec_file\` is not readable"
 
 declare build_file=${opts['build-dir']%/}/${rec_file#/} # e.g. build/rec/foo.rec
 declare recordable_file=${build_file%.rec}.sh           # e.g. build/rec/foo.sh
@@ -290,11 +293,34 @@ mkdir -p "${build_file%/*}"
 }
 
 echo " ${esc_red-}●${esc_reset-} ${esc_bold-}RECORDING ${real_rec_file#./}${esc_reset-}"
+declare exit_code_printing_block='
+  # highlight non-0 exit code
+  [ "$_status" -eq 0 ] || {
+    col=$(('"${opts['columns']-80}"' -"${#_status}" -3))
+    esc_hpa_col=$(tput hpa "$col" || tput ch "$col")
+    printf "%s%s%s ↩ %s\n" "$(tput cuu 1)${esc_hpa_col-}" "$(tput bold)$(tput "set""af" 1)" "$_status" "$(tput sgr0)"
+  }
+  echo
+'
+declare countdown_call="count_down ${opts['restart-delay']}"
 {
   echo '#!/usr/bin/env bash'
   [ ! "${opts['indicator']-}" ] || echo "export ${opts['indicator']}=1"
   [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
+  # language=sh
   cat <<'INSTRUMENTATION'
+# Restarts in the specified amount of seconds
+count_down() {
+  local seconds=${1:-5}
+  tput civis
+  [ "$seconds" -gt 0 ] || return 0
+  for ((i = 0; i < "$seconds"; i++)); do
+    printf '%s%s' $((seconds - i)) "$(tput hpa 0)"
+    sleep .5; tput 'c''norm'; sleep .5; tput civis
+  done
+}
+
+declare _status=0
 # Simulates a user typing in the specified command and executes it.
 rec() {
   local prompt="❱ "
@@ -316,41 +342,26 @@ rec() {
   sleep .5; tput 'c''norm'
   printf "%s%s%s\n" "$(tput 'set''af' 8)$(tput hpa 0)$prompt" "$s" "$(tput sgr0)"
   tput civis
-  local result=0 col esc_hpa_col tmp
+  local _status=0 tmp
   tmp=$(mktemp)
 
-  ("$@") || result=$? || true | tee "$tmp"
+  "$@" > >(tee "$tmp")
+  _status=$?
 
   # add eventually missing new line
-  [ "$(tail -c 1 "$tmp" | tr -Cd "\n" | tr "\n" 'n')" ] || {
+  [ "$(du -k "$tmp" | cut -f1)" = 0 ] || [ "$(tail -c 1 "$tmp" | tr -Cd "\n" | tr "\n" 'n')" ] || {
     printf "%s%s%s\n" "$(tput 'sm''so')" "␊" "$(tput sgr0)"
   }
   rm -- "$tmp"
-
-  # highlight non-0 exit code
-  [ "$result" -eq 0 ] || {
 INSTRUMENTATION
-  cat <<INSTRUMENTATION
-    col=\$((${opts['columns']-80} -"\${#result}" -3))
-INSTRUMENTATION
-  cat <<'INSTRUMENTATION'
-    esc_hpa_col=$(tput hpa "$col" || tput ch "$col")
-    printf "%s%s%s ↩ %s\n" "$(tput cuu 1)${esc_hpa_col-}" "$(tput bold)$(tput 'set''af' 1)" "$result" "$(tput sgr0)"
-  }
-  echo
-}
-# END OF INSTRUMENTATION
-INSTRUMENTATION
+  echo "$exit_code_printing_block"
+  echo "}"
+  echo "trap '$countdown_call' EXIT"
+  echo "# END OF INSTRUMENTATION"
+  echo "("
   cat "$real_rec_file"
-  [ "${opts['restart-delay']:=0}" -eq 0 ] || {
-    echo
-    printf "# RESTART IN %s SECONDS(S)\n" "${opts['restart-delay']}"
-    echo 'tput civis'
-    for ((i = 0; i < "${opts['restart-delay']}"; i++)); do
-      echo "printf '$((${opts['restart-delay']} - i))%s' \"\$(tput hpa 0)\""
-      printf "sleep .5; %s; sleep .5; %s;\n" 'tput c''norm' 'tput civis'
-    done
-  }
+  echo ') || _status=$?'
+  echo "$exit_code_printing_block"
 } >"$recordable_file"
 
 [ ! -e "$cast_file" ] || rm -- "$cast_file"
@@ -365,7 +376,7 @@ INSTRUMENTATION
     "$cast_file"
 )
 
-echo " ${esc_green-}◕${esc_reset-} ${esc_bold-}CONVERTING ${cast_file#./}${esc_reset-}"
+echo " ${esc_yellow-}◕${esc_reset-} ${esc_bold-}CONVERTING ${cast_file#./}${esc_reset-}"
 declare -a svg_term_args=()
 [ ! -e "$svg_file" ] || rm -- "$svg_file"
 [ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
@@ -439,10 +450,8 @@ css+=".container>g>svg>svg>*{transform: scaleY(.95);}"
 # write back SVG
 printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 
-[ -e "$svg_file" ] || failr "svg-file \`$svg_file\` unexpectedly missing" --stacktrace
+[ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file \`$svg_file\` unexpectedly missing" --stacktrace
 [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
 [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']}" = false ] || rm -- "$svg_file"
 [ "${flags['delete-build']}" = false ] || rm -- "$recordable_file" "$cast_file"
 logr success "${esc_bold-}COMPLETED ${svg_file#./}${esc_reset-}"
-
-# TODO add support for dim and italic

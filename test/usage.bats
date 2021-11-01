@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load ../helpers/common.sh
+  load helpers/common.sh
   load_lib support
   load_lib assert
 }
@@ -33,20 +33,20 @@ recordr() {
 
 @test "should print usage on missing option value" {
   run recordr --rec-dir
-  assert_failure
-  assert_line ' ✘ recordr --rec-dir failed: --rec-dir is missing a value'
+  assert_failure 64
+  assert_line ' ✘ recordr --rec-dir: --rec-dir is missing a value'
   assert_line '   Usage: recordr [OPTIONS] [FILE...]'
 }
 
 @test "should print error on invalid option value" {
   run recordr --rec-dir invalid
-  assert_failure
-  assert_line ' ✘ recordr failed: rec-dir `invalid` does not exist'
+  assert_failure 64
+  assert_line ' ✘ recordr: rec-dir `invalid` does not exist'
 }
 
 @test "should print usage on unknown option" {
   run recordr --unknown
-  assert_failure
-  assert_line ' ✘ recordr --unknown failed: unknown option --unknown'
+  assert_failure 64
+  assert_line ' ✘ recordr --unknown: unknown option --unknown'
   assert_line '   Usage: recordr [OPTIONS] [FILE...]'
 }

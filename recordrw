@@ -26,6 +26,7 @@
 # SOFTWARE.
 
 docker run --tty --rm --name "recordr-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)" \
+  -e DEBUG=0 \
   -e TZ="$(date +"%Z")" \
   -e PUID="$(id -u)" \
   -e PGID="$(id -g)" \

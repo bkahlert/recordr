@@ -67,11 +67,14 @@ The following options can be used to customize the conversion:
  - `--parallel` — maximum number of conversions that run at once; 0 will run as many conversions as possible (default: 4)
  - `--restart-delay` — number of seconds until the animation restart (default: 5)
  - `--build-dir` — path to store (intermediate) build artifacts in (default: build/rec/)
- - `--term-profile` — path to the terminal profile to use for conversion (default: auto) [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
+ - `--term-profile` — path to the terminal profile to use for conversion (default: auto)
  - `--hide-recording` — flag that if specified will not show the recording process (default during batch mode)
  - `--delete-build` — flag that if specified will keep delete intermediary build files on completion
 
 Files only need to be passed if you don't want the whole rec directory to be converted.
+
+To customize colors just export your settings from your favourite terminal emulator (see [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)) and put the profile in the directory specified by `--rec-dir` (default: `rec`).  
+The profile will be picked up automatically if you leave `--term-profile` to `auto`.
 
 ### Bash script
 
@@ -97,6 +100,7 @@ configuration on each container start.
 
 - `APP_USER` Name of the main user (default: recordr).
 - `APP_GROUP` Name of the main user's group (default: recordr).
+- `DEBUG` Whether to log debug information (default: `0`)
 - `TZ` Timezone the container runs in (default: `UTC`)
 - `LANG` Language/locale to use (default: `C.UTF-8`)
 - `PUID` User ID of the `libguestfs` user (default: `1000`)
@@ -114,7 +118,7 @@ docker run --rm \
   -e TZ="$(date +"%Z")" \
   -v "$(pwd):$(pwd)" \
   -w "$(pwd)" \
-  bkahlert/recordr:edge
+  recordr:local
 ```
 
 ## Testing
@@ -155,6 +159,8 @@ docker run -it --rm \
   bkahlert/recordr:edge
 ```
 
+- Authoring rec files benefits from short round-trips
+
 ## Contributing
 
 Want to contribute? Awesome! The most basic way to show your support is to star the project, or to raise issues. You
@@ -172,7 +178,5 @@ MIT. See [LICENSE](LICENSE) for more details.
 ## TODO
 
 - [ ] parametrize version
-- [ ] auto-build recording with workflow
-- [ ] fix README.md performance
-- [ ] fix build
-- [ ] GitHub Action
+- [ ] auto-build recording with workflow / GitHub Action
+- [ ] add support for dim and italic

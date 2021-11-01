@@ -5,6 +5,7 @@ ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
 
 # build and run time options
+ARG DEBUG=0
 ARG TZ=UTC
 ARG LANG=C.UTF-8
 ARG PUID=1000
@@ -38,7 +39,8 @@ RUN chmod +x \
 #&& curl -LfsSo /usr/local/bin/recordr.sh https://raw.githubusercontent.com/bkahlert/recordr/master/recordr.sh
 
 # env setup
-ENV TZ="$TZ" \
+ENV DEBUG="$DEBUG" \
+    TZ="$TZ" \
     LANG="$LANG" \
     PUID="$PUID" \
     PGID="$PGID"

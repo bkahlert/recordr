@@ -1,5 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -euo pipefail
+source logr.sh
 
 exec /usr/local/bin/recordr "$@"

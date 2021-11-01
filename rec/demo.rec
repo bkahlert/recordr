@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+
 echo
 
 # prints the passed arguments in bold
@@ -26,41 +26,50 @@ pause 4
 
 echo "The line above was actually printed because of the following invocation: "
 indent_command "$(format_command 'echo " 💡 This is a $(tput set''af 1)● rec$(tput sgr0) file."')"
-pause 8
+pause 6
 
 echo "To demonstrate a certain command you can type: "
 indent_command "$(format_command 'rec my_command arg1 arg2')"
-pause 8
+pause 6
 
 echo "Of course, for that to work 'my_command' needs to be declared. Let's do it: "
 indent_command "$(format_command 'my_command() {
   echo "doing stuff with" "$@"
 }')"
-# sample function
+# printing function
 my_command() {
   echo "doing stuff with" "$@"
 }
-pause 8
+pause 6
 
 printf %s "Next we will invoke: $(format_command 'my_command arg1 arg2')"
 pause 4
 my_command arg1 arg2
-pause 8
+pause 6
 
 printf %s "And now: $(format_command 'rec my_command arg1 arg2')"
 pause 4
 rec my_command arg1 arg2
-pause 8
+pause 6
 
-printf %s "Non-zero return values and \"missing\" line breaks are highlighted by default: $(format_command rec exit 42)"
-pause 8
-rec exit 42
-pause 8
+echo "Non-zero return values and \"missing\" line breaks are highlighted by default: "
+indent_command "$(format_command 'failing_command() {
+  printf "returning 42"
+  return 42
+}')"
+# failing function
+failing_command() {
+  printf "returning 42"
+  return 42
+}
+pause 6
+rec failing_command
+pause 6
 
 echo "That's all about it."
 echo "A $(tput setaf 1)● rec$(tput sgr0) file is nothing but a shell script with the option to use the 'rec' function."
-pause 8
+pause 6
 
 echo "As soon as a rec file terminates a countdown will start."
 echo "The moment it hits 0 the animation plays again."
-pause 8
+pause 6

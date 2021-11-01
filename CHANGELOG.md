@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- `author` authoring tool to create rec files easily
 - `recordrw` self-contained wrapper to run Recordr with minimal effort
 
 ### Changed

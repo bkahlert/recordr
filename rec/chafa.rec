@@ -186,5 +186,3 @@ printf %s "$clear"
 for image in "${!images[@]}"; do
   simple_chafa_demo "${images[$image]}"
 done
-
-exit 0

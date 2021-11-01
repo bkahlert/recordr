@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Bats wrapper that transparently delegates calls to an
 # ad-hoc built Docker image containing Bats.
@@ -244,6 +244,7 @@ bats() {
   local -r -a BATS_ARGS=(
     --jobs "$(grep 2>/dev/null -c ^processor /proc/cpuinfo || printf %s 4)"
     --no-parallelize-within-files
+    --no-tempdir-cleanup
     --recursive
     --timing
     "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"

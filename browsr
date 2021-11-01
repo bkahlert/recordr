@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+
+source logr.sh
+
+# Returns the default app for the specified scheme (default: https).
+# shellcheck disable=SC2120
+default_app() {
+  local scheme=${1:-https}
+  defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers \
+    | sed -n -e "/LSHandlerURLScheme = $scheme;/{x;p;d;}" -e 's/.*=[^"]"\(.*\)";/\1/g' -e x
+}
+
+# Open the specified URL in the specified browser (default: default browser)
+# if it's not already open.
+open_browser() {
+  local url=${1?url missing} application=${2:-$(default_app https)}
+  [ "$(fetch_browser_url "$application")" = "$url" ] || {
+    if [[ $application == *.* ]]; then
+     open -b "$application" "$url"
+    else
+     open -a "$application" "$url"
+    fi
+  }
+}
+
+# Prints the URL of the current tab of the specified browser (default: default browser).
+# shellcheck disable=SC2120
+fetch_browser_url() {
+  local application="\"${1:-$(default_app https)}\""
+  [[ $application == *.* ]] && application="id $application"
+  case ${application,,} in
+    *safari* | *webkit*)
+      osascript "tell application $application to return URL of front document"
+      ;;
+    *chrome* | *chromium* | *edge* | *brave*)
+      osascript "tell application $application to return URL of active tab of front window"
+      ;;
+    *)
+      osascript <<APPLE-SCRIPT
+tell application "System Events" to set frontApplication to name of 1st process whose frontMost is true
+set clipboardBackup to the clipboard
+tell application $application to activate
+tell application "System Events"
+  keystroke "l" using command down
+  keystroke "c" using command down
+  key code 97 # F6
+  key code 53 # ESC
+end tell
+tell application frontApplication to activate
+delay 0.5
+set the fetched_url to the clipboard as string
+set the clipboard to the clipboardBackup
+return the fetched_url
+APPLE-SCRIPT
+      ;;
+  esac
+}
+
+# Reloads the current tab of the specified browser (default: default browser).
+# shellcheck disable=SC2120
+reload_browser() {
+  local application="\"${1:-$(default_app https)}\"" command
+  [[ $application == *.* ]] && application="id $application"
+  case ${application,,} in
+    *safari* | *wekbit*)
+      command='
+  set docUrl to URL of document 1
+  set URL of document 1 to docUrl
+'
+      ;;
+    *chrome* | *chromium* | *edge* | *brave*)
+      command='reload active tab of window 1'
+      ;;
+    *)
+      command="
+  activate
+end tell
+tell application \"System Events\"
+  tell process $application
+    keystroke \"r\" using {command down}
+  end tell
+"
+      ;;
+  esac
+  osascript <<APPLE-SCRIPT
+tell application $application
+  $command
+end tell
+APPLE-SCRIPT
+}
+
+# Checks if the running system is supported.
+# Returns:
+#   0 - supported
+#   1 - not supported
+check_support() {
+  local os=
+  os=$(uname) || logr error "failed to determine operating system"
+  case $(uname) in
+    Darwin*) ;;
+    *)
+      logr error "unsupported operating system"
+      ;;
+  esac
+}
+
+# Remote controls the specified browser (default: default browser).
+main() {
+  check_support
+  local -a args=("$@")
+  [ $# -gt 0 ] || logr error "command missing" --usage 'COMMAND [ARG...]'$'\n''Commands: reload' -- "${args[@]}"
+  case $1 in
+  reload)
+    shift
+    [ $# -gt 0 ] || logr error "URL missing" --usage 'reload URL [BROWSER]' -- "${args[@]}"
+    local url=$1 browser
+    browser=$(default_app https)
+    open_browser "$url" "$browser"
+    reload_browser "$browser"
+    ;;
+  esac
+}
+
+main "$@"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -25,21 +25,29 @@ export IMAGE_PGID="id -g"
 # bashsupport disable=BP2001
 # shellcheck disable=SC2034
 image() {
+  local args=() expected_status=0 filter
+  while (($#)); do
+    case $1 in
+      --stdout-only)
+        filter=1 && shift
+        ;;
+      --stderr-only)
+        filter=2 && shift
+        ;;
+      --code=*)
+        expected_status=${1#*=} && shift
+        ;;
+      *)
+        args+=("$1") && shift
+        ;;
+    esac
+  done
+  set -- "${args[@]}"
   [ $# -gt 0 ] || fail 'IMAGE missing'
   output=$(
-    case $1 in
-    --stdout-only)
-      shift
-      exec 2>/dev/null
-      ;;
-    --stderr-only)
-    shift
-      exec 2>&1 1>/dev/null
-      ;;
-    *)
-      exec 2>&1
-      ;;
-    esac
+    exec 2>&1
+    [ ! "${filter-}" = 1 ] || exec 2>/dev/null
+    [ ! "${filter-}" = 2 ] || exec 1>/dev/null
 
     docker run --name "${BATS_TEST_NAME?must be only called from within a running test}" \
       ${IMAGE_PUID+-e PUID="$($IMAGE_PUID)"} \
@@ -48,10 +56,14 @@ image() {
       -v "$PWD":"$PWD" \
       -w "$PWD" \
       "$@"
-    ) || status=$?
+  ) || status=$?
   [ "${status-}" ] || status=0
   batsw_separate_lines lines output
-  assert_success
+  if [ "$expected_status" -eq 0 ]; then
+    assert_success
+  else
+    assert_failure "$expected_status"
+  fi
   assert_container_status "$BATS_TEST_NAME" exited
 }
 
