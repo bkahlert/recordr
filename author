@@ -26,8 +26,9 @@ declare -r REC_FILE="$BUILD_DIR/foo.rec"
 declare -r RECORDING=$(
   # language=sh
   cat <<'REC-FILE'
-trap 'echo "Exiting"; kill $$' EXIT
-rec echo "last line"
+
+rec "Hello World"
+
 REC-FILE
 )
 
