@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 # Downloads the specified URL and prints the path of the successful download.
 download() {

@@ -73,7 +73,7 @@ bake_local() {
 entrypoint_script() {
   cat <<'ENTRYPOINT'
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 if [ "${BATSW_INJECT-}" ]; then
   inject_path=${BATSW_INJECT%%=*}
   [ "${inject_path:0:1}" = "/" ] || inject_path="/opt/bats/${inject_path}"

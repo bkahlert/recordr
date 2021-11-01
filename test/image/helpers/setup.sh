@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -uo pipefail
 
 # TODO remove?
 export IMAGE_ID=${2:?}

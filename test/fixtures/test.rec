@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO remove
-set -euo pipefail
+set -uo pipefail
 
 # bashsupport disable=BP5008
 baz() {

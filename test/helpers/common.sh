@@ -2,7 +2,7 @@
 #
 # Common test setup
 
-set -euo pipefail
+set -uo pipefail
 declare -A -g shell_options=()
 while read -a arr -r; do
   # shellcheck disable=SC2209

@@ -44,7 +44,7 @@ rec() {
 # END OF INSTRUMENTATION
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -uo pipefail
 
 # bashsupport disable=BP5008
 baz() {
