@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
+#!/usr/bin/env recordr
 
-# shellcheck disable=SC1004
-rec -1 eval './recordr demo.rec'
+PATH=.:$PATH rec rec/demo.rec

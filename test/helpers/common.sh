@@ -3,6 +3,87 @@
 # Common test setup
 
 set -uo pipefail
+
+declare -r -g EX_USAGE=64       # command line usage error
+declare -r -g EX_CANTCREAT=73   # can't create (user) output file
+
+# Prints the specified error message and exits with an optional exit code (default: 1).
+# Arguments:
+#   -n          - number of stacktrace elements to skip (default: 0)
+#   -c | --code - exit code (default: 1)
+#   --          - indicates that all following arguments are non-options
+#   FORMAT      - `printf` format (default: unknown error)
+#   ARG...      - optional `printf` arguments
+die() {
+  local skip=0 code=$?
+  if [ "${1-}" ] && [ "${1#-}" -eq "${1#-}" ] &>/dev/null; then
+    skip=${1#-} && shift
+  fi
+  [ "$code" -ne 0 ] || code=1
+  while (($#)); do
+    case $1 in
+    -c=* | --code=*)
+      code=${1#*=} && shift
+      ;;
+    -c | --code)
+      [ "${2-}" ] || die -1 --code "$EX_USAGE" "${FUNCNAME[0]} $1 is missing a value"
+      code=$2 && shift 2
+      ;;
+    --)
+      shift && break      ;;
+    *)
+      break
+    esac
+  done
+
+  # shellcheck disable=SC2059
+  local message && printf -v message -- "${@-unknown error}"
+  message=${message%$'\n'}
+  message=${message//$'\n'/$'\n'   }
+
+  printf ' %s %s\n     at %s(%s:%s)\n' \
+    "$([ ! -t 2 ] || tput setaf 1)✘$([ ! -t 2 ] || tput sgr0)" "${message#   }" \
+    "${FUNCNAME[$((1+skip))]:-main}" "${BASH_SOURCE[$skip]:-?}" "${BASH_LINENO[$skip]:-?}" >&2
+  exit "$code"
+}
+
+#(die) # " ✘ error in line 35"
+#(touch &>/dev/null || die) # " ✘ error in line 36"
+#(die -c=42) # " ✘ error in line 37"
+#(die --code=42) # " ✘ error in line 38"
+#(die -c 42) # " ✘ error in line 37"
+#(die --code 42) # " ✘ error in line 38"
+#(die -c) # " ✘ die -c is missing a value"
+#(die --code) # " ✘ die --code is missing a value"
+#(die foo) # " ✘ foo"
+#(die '%s %s' foo bar) # " ✘ foo bar"
+#(die '%s\n%s' foo bar) # " ✘ foo\n   bar"
+#(die '%s\n%s\n' foo bar) # " ✘ foo\n   bar"
+#(TERM=xterm die 2>&1 | cat -) # no ESC
+#(TERM=xterm die > >(socat - pty | cat -)) # ESC
+
+# Exits with a error message if this function is called outside of
+# the execution of a test.
+require_test() {
+  [ "${BATS_TEST_TMPDIR-}" ] || die "running test required"
+  [ -e "${BATS_TEST_TMPDIR-}" ] || die "'$BATS_TEST_TMPDIR' does not exist"
+  [ -d "${BATS_TEST_TMPDIR-}" ] || die "'$BATS_TEST_TMPDIR' is no directory"
+  [ -w "${BATS_TEST_TMPDIR-}" ] || die "'$BATS_TEST_TMPDIR' is no writable directory"
+}
+
+# Enables the specified options. Prefix an option with + to disable.
+# Prefixing options with `-` is optional.
+#set_opt() {
+#  local opt set_op shopt_op
+#  while(($#)); do
+#    opt=$1 set_op=- shopt_op=s && shift
+#    [ ! "${opt:0:1}" = "-" ] || opt=${opt:1}
+#    [ ! "${opt:0:1}" = "+" ] || opt=${opt:1} set_op=+ shopt_op=u
+#    set "${set_op}o" "$opt" 2>/dev/null || shopt "-q${shopt_op}" "$opt" 2>/dev/null || exit 99
+#  done
+#}
+
+
 declare -A -g shell_options=()
 while read -a arr -r; do
   # shellcheck disable=SC2209
@@ -12,6 +93,7 @@ while read -a arr -r; do
   shell_options["${arr[0]}"]=opt
 done < <(shopt)
 
+# TODO check $SHELLOPTS and $BASHOPTS instead
 # Returns if the specified shell option is enabled.
 # Arguments:
 #   1 - complete shell option name
@@ -33,6 +115,7 @@ shell_option_enabled() {
   esac
 }
 
+# TODO use shopt -so $1 || shopt -sO $1 || fail "'$1' is neither a shell nor a Bash option"
 # Enables the specified shell option.
 # Arguments:
 #   1 - complete shell option name
@@ -142,7 +225,7 @@ trace() {
     set -- "${output:-}"
   fi
   local argc="$#" _trace_args=""
-  printf -v _trace_args " '%q'" "$@"
+  printf -v _trace_args " %q" "$@"
   if { true >&3; } 2<>/dev/null; then
     echo '# ' "$argc$_trace_args" >&3
   else
@@ -347,7 +430,7 @@ assert_file_not_contains() {
 }
 
 # Calls the specified command once a seconds for at most the
-# specified amount of time and returns 0 if the command succeeds within time.
+# specified number of time and returns 0 if the command succeeds within time.
 assert_within() {
   local -i time=${1%s} && shift
   [ ! "${1-}" = "--" ] || shift
@@ -410,7 +493,7 @@ fixture() {
 #   STDERR - details on failure
 # See also:
 #   cp(1) `fixture`
-cp_fixture() {
+copy_fixture() {
   [ $# -ge 2 ] || fail "${FUNCNAME[0]} needs at least two arguments: fixture and target"
   local -a args=()
   while (($#)); do
@@ -424,32 +507,36 @@ cp_fixture() {
   cp "${args[@]}"
 }
 
-# Creates a temporary file containing the specified lines and prints it path.
-# If the first arguments is `+x` the file will be made executable.
+# Creates a file with `executable` permissions in this test's temporary
+# directory containing the contents of the specified files
+# (`-` means standard input), or standard input if none are given,
+# and prints it path.
 # Arguments:
-#   +x - optional flag set the executable flag on the returned file
-#   -  - reads the lines from STDIN
-#   *  - lines to add to the file
+#   [FILE...] - files of which the contents to add to the temporary executable
 # Output:
-#   STDOUT - path of the created file
-mkfile() { #TODO remove
-  local file
-  file="$(mktemp "$BATS_TEST_TMPDIR/XXXXXX")"
-  touch "$file"
-  [ ! "${1-}" = '+x' ] || {
-    chmod +x "$file" && shift
-  }
-  while (($#)); do
-    case $1 in
-      -)
-        cat - >>"$file" && shift
-        ;;
-      *)
-        printf '%s\n' "$1" >>"$file" && shift
-        ;;
-    esac
-  done
-  printf '%s\n' "$file"
+#   STDOUT - path of the created executable
+make_executable() {
+  require_test
+  local executable
+  executable="$(mktemp "$BATS_TEST_TMPDIR/executable_XXXXXX")" || die --code "$EX_CANTCREAT" "failed to create temporary file"
+  touch "$executable" || die "failed to touch $executable"
+  chmod +x "$executable" || die "failed to change permissions of $executable"
+  cat "$@" >"$executable" || die "failed to copy $*"
+  echo "$executable"
+}
+
+# Creates a file with `executable` permissions in this test's temporary
+# directory containing a shebang (`#!`) with the specified interpreter,
+# the contents of the remaining files arguments
+# (`-` means standard input), or standard input if none are given,
+# and prints it path.
+# Arguments:
+#   1         - interpreter (e.g. `/usr/bin/env bash`)
+#   [FILE...] - files of which the contents to add to the temporary interpretable
+# Output:
+#   STDOUT - path of the created executable
+make_interpretable() {
+  make_executable <(echo "$1") "${@:2}"
 }
 
 # Expect-based counterpart to Bats' run function.
@@ -461,7 +548,7 @@ mkfile() { #TODO remove
 # Inputs:
 #   STDIN - content of the expect script
 expect() { # [!|=N] [--keep-empty-lines] [--output merged|separate|stderr|stdout] [--] <command to run...>
-  run "$@" "$(mkfile +x '#!/usr/bin/expect' -)"
+  run "$@" "$(make_interpretable '#!/usr/bin/expect' -)"
 }
 
 # Tests if this test run was invoked via BashSupport Pro.

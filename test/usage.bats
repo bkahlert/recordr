@@ -16,15 +16,73 @@ recordr() {
   assert_output --partial '
    ▔▔▔▔▔▔▔ RECORDR SNAPSHOT
 
-   Usage: recordr [OPTIONS] [FILE...]
+   Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]
 
    Options:
      --'
-  assert_line '     --rec-dir              path to prefix specified rec files with (default: rec/)'
-  assert_output --partial '
+  assert_line '     --out-dir              path to copy the created SVG files to (default: docs/)'
+  assert_output --partial "
    Files:
-     Specify any number of files relative to the `rec-dir`.
-     If no files are specified, all files located in the `rec-dir` are processed.'
+     There are basically two ways to specify which ● rec files to convert:
+     - Convert a single file: ./recordr rec/foo.rec
+       same as: ./rec/foo.rec (interpreter form)
+       same as: ./recordr --build-dir build/rec --out-dir docs rec/foo.rec (explicit directories)
+
+       Before:
+       ▤ work             ⬅︎ you are here
+       └─▤ rec
+         ├─● foo.rec
+         └─▤ bar
+           └─● baz.rec
+
+       After:
+       ▤ work             ⬅︎ you are here
+       ├─▤ rec
+       │ ├─● foo.rec
+       │ └─▤ bar
+       │   └─● baz.rec
+       ├─▤ build
+       │ └─▤ rec
+       │   ├─▢ foo.sh
+       │   ├─▢ foo.svg.0
+       │   ├─▢ foo.svg.⋮
+       │   └─▢ foo.svg.n
+       └─▤ docs
+         └─● foo.svg      ⬅︎ to SVG converted ● rec file
+
+     - Convert a file tree: ./recordr rec
+       same as: ./recordr (default directory: rec)
+       same as: ./recordr --build-dir build/rec --out-dir docs rec (explicit default directories)
+       same as: ./recordr rec foo.rec bar/baz.rec (explicit files)
+
+       Before:
+       ▤ work             ⬅︎ you are here
+       └─▤ rec
+         ├─● foo.rec
+         └─▤ bar
+           └─● baz.rec
+
+       After:
+       ▤ work             ⬅︎ you are here
+       ├─▤ rec
+       │ ├─● foo.rec
+       │ └─▤ bar
+       │   └─● baz.rec
+       ├─▤ build
+       │ └─▤ rec
+       │   ├─▢ foo.sh
+       │   ├─▢ foo.svg.0
+       │   ├─▢ foo.svg.⋮
+       │   ├─▢ foo.svg.n
+       │   └─▤ bar
+       │     ├─▢ baz.sh
+       │     ├─▢ baz.svg.0
+       │     ├─▢ baz.svg.⋮
+       │     └─▢ baz.svg.n
+       └─▤ docs
+         ├─● foo.svg      ⬅︎ to SVG converted ● rec file
+         └─▤ bar
+           └─● baz.svg    ⬅︎ to SVG converted ● rec file"
 }
 
 @test "should print help on -h" {
@@ -32,21 +90,21 @@ recordr() {
 }
 
 @test "should print usage on missing option value" {
-  run recordr --rec-dir
+  run recordr --parallel
   assert_failure 64
-  assert_line ' ✘ recordr --rec-dir: --rec-dir is missing a value'
-  assert_line '   Usage: recordr [OPTIONS] [FILE...]'
+  assert_line ' ✘ recordr --parallel: --parallel is missing a value'
+  assert_line '   Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]'
 }
 
 @test "should print error on invalid option value" {
-  run recordr --rec-dir invalid
-  assert_failure 64
-  assert_line ' ✘ recordr: rec-dir `invalid` does not exist'
+  run recordr --parallel invalid
+  assert_failure 65
+  assert_line --partial "invalid --parallel value 'invalid'"
 }
 
 @test "should print usage on unknown option" {
   run recordr --unknown
   assert_failure 64
   assert_line ' ✘ recordr --unknown: unknown option --unknown'
-  assert_line '   Usage: recordr [OPTIONS] [FILE...]'
+  assert_line '   Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]'
 }

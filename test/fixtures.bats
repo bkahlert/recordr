@@ -19,6 +19,9 @@ recording() {
     echo '#!/usr/bin/env bash'
     echo '
     rec() {
+      if [ "$#" -eq 0 ]; then
+        set -- -1 eval "$(cat -)"
+      fi
       [[ ! "${1-}" =~ -[0-9]+ ]] || shift
       "$@"
     }
@@ -28,6 +31,7 @@ recording() {
     done
     cat "$BATS_CWD/rec/${1?rec file missing}"
   } >"$file"
+
   echo "$file"
 }
 
@@ -43,11 +47,14 @@ recording() {
   run bash -c "cd '$BATS_CWD' && bash '$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
   assert_output "\
- ℹ terminal profile search directory: rec/
- ✔ terminal profile: rec/.iterm"''"colors
- ● RECORDING rec/demo.rec
- ◕ CONVERTING build/rec/demo.cast
- ✔ COMPLETED build/rec/demo.svg"
+ ℹ terminal profile search directory: rec
+ ✔ find_term_profile: terminal profile: rec/.itermcolors
+ ● RECORDING: rec/demo.rec
+ ◔ CONVERTING: build/rec/demo.cast
+ ◑ PATCHING: build/rec/demo.svg.0
+ ◕ LINKING: build/rec/demo.svg.1
+ ● ANNOTATING: build/rec/demo.svg.2
+ ● COMPLETED: build/rec/demo.svg"
 }
 
 @test "should have working logr.rec" {
@@ -80,4 +87,17 @@ uTyyyyyy3uuuuuw_'gy~we "~~~~~~~~'     :
                  ^ .
 NYAN-CAT
   )
+}
+
+
+@test "should have working hello-world.rec" {
+  TERM=xterm run bash "$(recording "hello-world.rec")"
+  assert_success
+  assert_line "Hello World!"
+}
+
+@test "should have working recording-hello-world.rec" {
+  run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-hello-world.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
+
+  assert_output --partial " ● COMPLETED: build/rec/hello-world.svg"
 }

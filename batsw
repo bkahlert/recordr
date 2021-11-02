@@ -29,20 +29,16 @@ die() {
   exit 1
 }
 
-# Splits a variable to an array like it would be the case if a program was called,
+# Splits the specified variable to an array like it would be the case if a program was called,
 # that is, its value is word-split along the whitespaces while *honoring* quotes.
-#
 # Arguments:
-#   1 - name of the variable
+#   1 - variable name
 split_to_array() {
-  # Called like a program in conjunction with eval.
   # Assigns the arguments array to the variable with the name of the first element.
-  program() {
-    local var="$1"
-    shift
-    eval "$var"='("${@}")'
-  }
-  eval program "$1" "${!1}"
+  program() { eval "$1"='("${@:2}")'; }
+  [ ! -v "$1" ] || eval program "$1" "${!1}"
+  [ -v "$1" ] || eval "declare -a -g $1=()"
+  unset program
 }
 
 # Bakes a new Docker image
@@ -55,7 +51,7 @@ split_to_array() {
 bake_local() {
   echo "🐳 building Docker image:" "$@"
   if ! docker buildx bake "$@"; then
-    die "Failed to bake Docker image"
+    die "failed to bake Docker image"
   fi
   docker images --format='{{.ID}}' | head -1
 }
@@ -97,6 +93,11 @@ ENTRYPOINT
 # Builds a Bats docker container and returns its image ID.
 # All arguments are passed unchanged to `docker build`.
 #
+# According to http://lists.busybox.net/pipermail/busybox/2004-January/044642.html
+# busybox's sed is a "fully compatible sed implementation", but unfortunately
+# it's not (https://lists.uclibc.org/pipermail/uclibc-cvs/2012-January/030044.html).
+# Therefore GNU's sed will be also installed.
+#
 # Globals:
 #   none
 # Arguments:
@@ -120,6 +121,7 @@ RUN apk \
     git \
     jq \
     shadow \
+    sed \
     openssh-client \
     sshpass
 RUN set -eu; \
@@ -205,18 +207,18 @@ bats() {
   local -a BATS_ARGS=()
   while (($#)); do
     case "$1" in
-    -e | --env)
-      if [ "${2-}" ] && [ "${2:0:1}" != "-" ]; then
-        DOCKER_ARGS+=("$1" "$2")
-        shift 2
-      else
-        die "value of $1 missing"
-      fi
-      ;;
-    *)
-      BATS_ARGS+=("$1")
-      shift
-      ;;
+      -e | --env)
+        if [ "${2-}" ] && [ "${2:0:1}" != "-" ]; then
+          DOCKER_ARGS+=("$1" "$2")
+          shift 2
+        else
+          die "value of $1 missing"
+        fi
+        ;;
+      *)
+        BATS_ARGS+=("$1")
+        shift
+        ;;
     esac
   done
 
@@ -242,9 +244,8 @@ bats() {
   fi
 
   local -r -a BATS_ARGS=(
-    --jobs "$(grep 2>/dev/null -c ^processor /proc/cpuinfo || printf %s 4)"
+    --jobs "$(nproc || echo 4)"
     --no-parallelize-within-files
-    --no-tempdir-cleanup
     --recursive
     --timing
     "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
@@ -283,61 +284,59 @@ main() {
   local -a BATS_ARGS=("--env" "TESTING=1")
   while (($#)); do
     case "$1" in
-    --inject)
-      [ "${2-}" ] || die "value of inject missing"
-      BATS_ARGS+=("--env" "BATSW_INJECT=$2")
-      shift 2
-      ;;
-    --quiet)
-      export BATSW_QUIET=1
-      shift
-      ;;
-    -o | --output)
-      if [ "${2-}" ] && [ "${2:0:1}" != "-" ]; then
-        mkdir -p "$2"
-        BATS_ARGS+=("$1" "$2")
+      --inject)
+        [ "${2-}" ] || die "value of inject missing"
+        BATS_ARGS+=("--env" "BATSW_INJECT=$2")
         shift 2
-      else
-        [ "${2-}" ] || die "value of $1 missing"
-      fi
-      ;;
-    *)
-      BATS_ARGS+=("$1")
-      shift
-      ;;
+        ;;
+      --quiet)
+        export BATSW_QUIET=1
+        shift
+        ;;
+      -o | --output)
+        if [ "${2-}" ] && [ "${2:0:1}" != "-" ]; then
+          mkdir -p "$2"
+          BATS_ARGS+=("$1" "$2")
+          shift 2
+        else
+          [ "${2-}" ] || die "value of $1 missing"
+        fi
+        ;;
+      *)
+        BATS_ARGS+=("$1")
+        shift
+        ;;
     esac
   done
 
   [ "${BATS_TMPDIR-}" ] || export BATS_TMPDIR="build/bats-tmp"
-  [ -e "${BATS_TMPDIR}" ] && rm -rf "${BATS_TMPDIR:?}"
-  [ -e "${BATS_TMPDIR}" ] || mkdir -p "${BATS_TMPDIR}" || die "'${BATS_TMPDIR}' could not be created"
+  [ ! -e "$BATS_TMPDIR" ] || rm -rf -- "$BATS_TMPDIR"
+  [ -e "$BATS_TMPDIR" ] || mkdir -p "$BATS_TMPDIR" || die "'$BATS_TMPDIR' could not be created"
   # shellcheck disable=SC2064
-  trap "rmdir '${BATS_TMPDIR}' &>/dev/null || true" EXIT # delete if empty on exit
+  trap "rmdir '$BATS_TMPDIR' &>/dev/null || true" EXIT # delete if empty on exit
 
   echo "$(tput setaf 2)▶▶$(tput sgr0) $(tput bold)TEST RUN$(tput sgr0)"
   echo "$(tput setaf 7) ℹ$(tput sgr0) working directory: $PWD"
-  echo "$(tput setaf 7) ℹ$(tput sgr0) batsw command line:" "${BATS_CMD}" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
+  echo "$(tput setaf 7) ℹ$(tput sgr0) batsw command line:" "$BATS_CMD" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
 
   if [ "${DOCKER_BAKE-}" ]; then
-    split_to_array "DOCKER_BAKE"
-    if ! baked_tag="$(bake_local "${DOCKER_BAKE[@]+"${DOCKER_BAKE[@]}"}")"; then
-      exit 1
-    fi
-    echo "🐳 built Docker image: ${baked_tag}"
+    split_to_array DOCKER_BAKE
+    baked_tag="$(bake_local "${DOCKER_BAKE[@]+"${DOCKER_BAKE[@]}"}")"
+    echo "🐳 built Docker image: $baked_tag"
   fi
 
   # Checks for tests starting with capital X.
   # If such exist, focus on them and ignore the others.
   local highlighted_tests_args=('--filter' '^[Xx]')
   local highlighted_tests=0
-  if ! highlighted_tests=$(TERM=dumb "${BATS_CMD}" --count "${highlighted_tests_args[@]}" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"); then
+  if ! highlighted_tests=$(TERM=dumb "$BATS_CMD" --count "${highlighted_tests_args[@]}" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"); then
     echo "Failed to find highlighted tests"
   fi
 
   if [ "$highlighted_tests" = "0" ]; then
-    "${BATS_CMD}" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
+    "$BATS_CMD" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
   else
-    "${BATS_CMD}" "${highlighted_tests_args[@]}" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
+    "$BATS_CMD" "${highlighted_tests_args[@]}" "--no-tempdir-cleanup" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
   fi
 }
 

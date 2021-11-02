@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env recordr
+
 set -uo pipefail
 
 # Downloads the specified URL and prints the path of the successful download.

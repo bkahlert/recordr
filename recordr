@@ -76,16 +76,15 @@ find_term_profile() {
 }
 
 declare -A opts=(
-  ['rec-dir']=rec/                                                            # path to prefix specified rec files with
-  ['build-dir']=build/rec/                                                    # path to store (intermediate) build artifacts in
-  ['out-dir']=docs/                                                           # path to copy the created SVG files to
-  ['term']=xterm-256color                                                     # value to use for the TERM environmental variable
-  ['indicator']=RECORDING                                                     # name of the environmental variable set during recording
-  ['columns']=132                                                             # number of columns to use for recording and conversion
-  ['rows']=25                                                                 # number of rows to use for recording and conversion
-  ['restart-delay']=5                                                         # number of seconds until the animation restart
-  ['term-profile']=auto                                                       # path to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
-  ['parallel']=$(grep 2>/dev/null -c ^processor /proc/cpuinfo || printf %s 4) # maximum number of conversions that run at once; 0 will run as many conversions as possible
+  ['build-dir']=build/rec/        # path to store (intermediate) build artifacts in
+  ['out-dir']=docs/               # path to copy the created SVG files to
+  ['term']=xterm-256color         # value to use for the TERM environmental variable
+  ['indicator']=RECORDING         # name of the environmental variable set during recording
+  ['columns']=132                 # number of columns to use for recording and conversion
+  ['rows']=25                     # number of rows to use for recording and conversion
+  ['restart-delay']=5             # number of seconds until the animation restart
+  ['term-profile']=auto           # path to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
+  ['parallel']=$(nproc || echo 4) # maximum number of conversions that run at once; 0 will run as many conversions as possible
 )
 [ ! "${TESTING-}" ] || opts['restart-delay']=1
 declare -A flags=(
@@ -93,7 +92,7 @@ declare -A flags=(
   ['hide-recording']=false # flag that if specified will not show the recording process (default during batch mode)
 )
 
-declare raw=("$@") args=() usage='[OPTIONS] [FILE...]'
+declare raw=("$@") args=() usage='[OPTIONS] [DIR[/ ]FILE [FILE...]]'
 while (($#)); do
   case $1 in
     -h | --help)
@@ -112,20 +111,71 @@ ${MARGIN}Options:
 $(printf "$margin"'%s %s\n' "${options[@]}")
 
 ${MARGIN}Files:
-${margin}Specify any number of files relative to the \`rec-dir\`.
-${margin}If no files are specified, all files located in the \`rec-dir\` are processed.
+${margin}There are basically two ways to specify which ${esc_red-}● rec${esc_reset-} files to convert:
+${margin}- ${esc_bold-}Convert a single file:${esc_reset-} ./recordr rec/foo.rec
+${margin}  ${esc_italic-}same as:${esc_reset-} ./rec/foo.rec ${esc_italic-}(interpreter form)${esc_reset-}
+${margin}  ${esc_italic-}same as:${esc_reset-} ./recordr --build-dir build/rec --out-dir docs rec/foo.rec ${esc_italic-}(explicit directories)${esc_reset-}
+
+${margin}  ${esc_bold-}Before:${esc_reset-}
+${margin}  ▤ work             ⬅︎ you are here
+${margin}  └─▤ rec
+${margin}    ├─${esc_red-}●${esc_reset-} foo.rec
+${margin}    └─▤ bar
+${margin}      └─${esc_red-}●${esc_reset-} baz.rec
+
+${margin}  ${esc_bold-}After:${esc_reset-}
+${margin}  ▤ work             ⬅︎ you are here
+${margin}  ├─▤ rec
+${margin}  │ ├─${esc_red-}●${esc_reset-} foo.rec
+${margin}  │ └─▤ bar
+${margin}  │   └─${esc_red-}●${esc_reset-} baz.rec
+${margin}  ├─▤ build
+${margin}  │ └─▤ rec
+${margin}  │   ├─▢ foo.sh
+${margin}  │   ├─▢ foo.svg.0
+${margin}  │   ├─▢ foo.svg.⋮
+${margin}  │   └─▢ foo.svg.n
+${margin}  └─▤ docs
+${margin}    └─${esc_red-}●${esc_reset-} foo.svg      ⬅︎ to SVG converted ${esc_red-}● rec${esc_reset-} file
+
+${margin}- ${esc_bold-}Convert a file tree:${esc_reset-} ./recordr rec
+${margin}  ${esc_italic-}same as:${esc_reset-} ./recordr ${esc_italic-}(default directory: rec)${esc_reset-}
+${margin}  ${esc_italic-}same as:${esc_reset-} ./recordr --build-dir build/rec --out-dir docs rec ${esc_italic-}(explicit default directories)${esc_reset-}
+${margin}  ${esc_italic-}same as:${esc_reset-} ./recordr rec foo.rec bar/baz.rec ${esc_italic-}(explicit files)${esc_reset-}
+
+${margin}  ${esc_bold-}Before:${esc_reset-}
+${margin}  ▤ work             ⬅︎ you are here
+${margin}  └─▤ rec
+${margin}    ├─${esc_red-}●${esc_reset-} foo.rec
+${margin}    └─▤ bar
+${margin}      └─${esc_red-}●${esc_reset-} baz.rec
+
+${margin}  ${esc_bold-}After:${esc_reset-}
+${margin}  ▤ work             ⬅︎ you are here
+${margin}  ├─▤ rec
+${margin}  │ ├─${esc_red-}●${esc_reset-} foo.rec
+${margin}  │ └─▤ bar
+${margin}  │   └─${esc_red-}●${esc_reset-} baz.rec
+${margin}  ├─▤ build
+${margin}  │ └─▤ rec
+${margin}  │   ├─▢ foo.sh
+${margin}  │   ├─▢ foo.svg.0
+${margin}  │   ├─▢ foo.svg.⋮
+${margin}  │   ├─▢ foo.svg.n
+${margin}  │   └─▤ bar
+${margin}  │     ├─▢ baz.sh
+${margin}  │     ├─▢ baz.svg.0
+${margin}  │     ├─▢ baz.svg.⋮
+${margin}  │     └─▢ baz.svg.n
+${margin}  └─▤ docs
+${margin}    ├─${esc_red-}●${esc_reset-} foo.svg      ⬅︎ to SVG converted ${esc_red-}● rec${esc_reset-} file
+${margin}    └─▤ bar
+${margin}      └─${esc_red-}●${esc_reset-} baz.svg    ⬅︎ to SVG converted ${esc_red-}● rec${esc_reset-} file
 "
       exit 0
       ;;
 
     # options
-    --rec-dir=*)
-      opts['rec-dir']=${1#*=} && shift
-      ;;
-    --rec-dir)
-      [ "${2-}" ] || logr error --code "$EX_USAGE" "$1 is missing a value" --usage "$usage" -- "${raw[@]}"
-      opts['rec-dir']=$2 && shift 2
-      ;;
     --build-dir=*)
       opts['build-dir']=${1#*=} && shift
       ;;
@@ -211,74 +261,93 @@ ${margin}If no files are specified, all files located in the \`rec-dir\` are pro
 done
 set -- "${args[@]}"
 
-[ -e "${opts['rec-dir']}" ] || logr error --code "$EX_USAGE" "rec-dir \`${opts['rec-dir']}\` does not exist"
-[ -d "${opts['rec-dir']}" ] || logr error --code "$EX_USAGE" "rec-dir \`${opts['rec-dir']}\` is no directory"
-[ -r "${opts['rec-dir']}" ] || logr error --code "$EX_NOINPUT" "rec-dir \`${opts['rec-dir']}\` is not readable"
-
+# validate build-dir
 [ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
-  || logr error --code "$EX_USAGE" "build-dir \`${opts['build-dir']}\` ($PWD/${opts['build-dir']}) could not be created: $(id -u) --- $(ls -lisanR "$PWD")"
-[ -r "${opts['build-dir']}" ] || logr error --code "$EX_NOINPUT" "build-dir \`${opts['build-dir']}\` is not readable"
+  || logr error --code "$EX_USAGE" "build-dir '${opts['build-dir']}' ($PWD/${opts['build-dir']}) could not be created: $(id -u) --- $(ls -lisanR "$PWD")"
+[ -r "${opts['build-dir']}" ] || logr error --code "$EX_NOINPUT" "build-dir '${opts['build-dir']}' is not readable"
 
+# validate out-dir
 [ ! "${opts['out-dir']}" ] || {
   [ -d "${opts['out-dir']}" ] || mkdir -p "${opts['out-dir']}" \
-    || logr error --code "$EX_CANTCREAT" "out-dir \`${opts['out-dir']}\` ($PWD/${opts['out-dir']}) could not be created"
-  [ -w "${opts['out-dir']}" ] || logr error --code "$EX_CANTCREAT" "out-dir \`${opts['out-dir']}\` is not writable"
+    || logr error --code "$EX_CANTCREAT" "out-dir '${opts['out-dir']}' ($PWD/${opts['out-dir']}) could not be created"
+  [ -w "${opts['out-dir']}" ] || logr error --code "$EX_CANTCREAT" "out-dir '${opts['out-dir']}' is not writable"
 }
 
+# validate parallel
+[ ! "${opts['parallel']}" ] || {
+  [ "${opts['parallel']}" -eq "${opts['parallel']}" ] 2>/dev/null || logr error --code "$EX_DATAERR" "invalid --parallel value '${opts['parallel']}'"
+}
+
+# normalize files / pos. arguments to `base-dir` `file...`
+[ $# -gt 0 ] || set -- rec                                             # [ ] -> base
+[ -e "$1" ] || logr error --name "NOT FOUND" --code "$EX_NOINPUT" "$1" # validate base
+[ ! -d "$1" ] || [ $# -ne 1 ] || {                                     # base -> base [file...]
+  readarray -d '' files < <(cd "$1" && find . -name '*.rec' -print0)
+  set -- "${1%/}" "${files[@]#./}"
+}
+[ ! -f "$1" ] || set -- "${1%/*}" "${1##*/}" "${@:2}" # base/file [file...] -> base file [file...]
+
+# validate term
 infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unknown terminal `'"${opts['term']}"'`'
 
-[ ! "${opts['term-profile']}" = "auto" ] || opts['term-profile']=$(find_term_profile "${opts['rec-dir']}") || {
+# validate term-profile
+[ ! "${opts['term-profile']}" = "auto" ] || opts['term-profile']=$(find_term_profile "$1") || {
   logr error --code "$EX_USAGE" "unexpected error while looking for a terminal profile" -- "$@"
 }
 [ -e "${opts['term-profile']}" ] || opts['term-profile']=''
 
-# Prints a command line that calls this binary with `options` as its specified arguments.
-inv() {
-  printf '%b' "$0"
+# invoke self for each file -> recordr [OPTIONS] base file
+[ $# -eq 2 ] || {
+  declare args=()
+  flags['hide-recording']=true
+  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH PROCESSING${esc_reset-}"
+  logr info "recordings directory: $1"
+
   for opt in "${!opts[@]}"; do
-    printf ' --%b=%b' "$opt" "${opts[$opt]}"
+    args+=("--$opt=${opts[$opt]}")
   done
   for flag in "${!flags[@]}"; do
-    [ ! "${flags[$flag]}" = true ] || printf ' --%b' "$flag"
+    [ ! "${flags[$flag]}" = true ] || args+=("--$flag")
   done
-}
 
-# no args -> invoke recordr with all rec files in `rec` directory
-[ $# -eq 0 ] && {
-  declare inv
-  flags['hide-recording']=true
-  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
-  logr info "recordings directory: ${opts['rec-dir']}"
-  inv=$(inv)
-  #shellcheck disable=SC2086,SC2128
-  (cd "${opts['rec-dir']}" && find . -name '*.rec' -print0) | xargs -0 -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
-  logr success "${esc_bold-}BATCH COMPLETED${esc_reset-}"
-  exit 0
-}
+  declare -A exit_codes=()
+  declare count process
+  for file in "${@:2}"; do
+    tmp=$(mktemp "${opts['build-dir']%/}/status-XXXXXX")
+    ("$0" "${args[@]}" "$1" "$file" || echo "$?" >"$tmp") &
+    exit_codes["$!"]="$tmp"
+    while true; do
+      count="$(jobs -pr | sed -n '$=')"
+      [ "${count:-0}" -ge "${opts['parallel']}" ] || break
+      exit_code=0
+      wait -n -p process || exit_code=$?
+      exit_codes["${process}"]="$exit_code"
+    done
+  done
 
-# multiple args -> invoke recordr with each arg separately
-[ $# -gt 1 ] && {
-  declare inv
-  flags['hide-recording']=true
-  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH RECORD AND CONVERT${esc_reset-}"
-  logr info "recordings directory: ${opts['rec-dir']}"
-  logr info "files: ${*}"
-  inv=$(inv)
-  #shellcheck disable=SC2086,SC2128
-  (while (($#)); do
-    printf '%s\n' "$1" && shift
-  done) | xargs -I {} -n 1 -P "${opts['parallel']}" -r $inv {}
-  wait
-  logr success "${esc_bold-}BATCH COMPLETED${esc_reset-}"
-  exit 0
+  declare failed=0 exit_code
+  wait "${!exit_codes[@]}" || true
+  for tmp in "${exit_codes[@]}"; do
+    exit_code=0
+    [ ! -f "$tmp" ] || {
+      exit_code=$(cat "$tmp")
+      rm -- "$tmp"
+    }
+    [ "${exit_code:-0}" -eq 0 ] || failed=$((failed + 1))
+  done
+
+  [ "$failed" -lt $# ] || logr fail --name "BATCH PROCESSING"
+  [ "$failed" -eq 0 ] || logr warn --name "BATCH PROCESSING" "COMPLETED WITH ERRORS" || exit $?
+  logr success --name "BATCH PROCESSING" "COMPLETED"
+  exit
 }
 
 # one arg left = relative path to rec file
-declare rec_file=${1#./}                                         # e.g. foo.bar
-declare real_rec_file=${opts['rec-dir']%/}/$rec_file             # e.g. rec/foo.bar
+declare rec_file=${2#./}                                         # e.g. foo.bar
+declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.bar
 [ -f "$real_rec_file" ] || real_rec_file=${real_rec_file%.*}.rec # e.g. rec/foo.rec
-[ -e "$real_rec_file" ] || logr error --code "$EX_USAGE" "rec-file \`$real_rec_file\` does not exist"
-[ -r "$real_rec_file" ] || logr error --code "$EX_NOINPUT" "rec-file \`$real_rec_file\` is not readable"
+[ -e "$real_rec_file" ] || logr error --name "NOT FOUND" --code "$EX_USAGE" "$real_rec_file"
+[ -r "$real_rec_file" ] || logr error --name "NOT READABLE" --code "$EX_NOINPUT" "$real_rec_file"
 
 declare build_file=${opts['build-dir']%/}/${rec_file#/} # e.g. build/rec/foo.rec
 declare recordable_file=${build_file%.rec}.sh           # e.g. build/rec/foo.sh
@@ -292,13 +361,13 @@ mkdir -p "${build_file%/*}"
   mkdir -p "${out_svg_file%/*}"
 }
 
-echo " ${esc_red-}●${esc_reset-} ${esc_bold-}RECORDING ${real_rec_file#./}${esc_reset-}"
+echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${real_rec_file#./}${esc_reset-}"
 declare exit_code_printing_block='
   # highlight non-0 exit code
   [ "$_status" -eq 0 ] || {
     col=$(('"${opts['columns']-80}"' -"${#_status}" -3))
     esc_hpa_col=$(tput hpa "$col" || tput ch "$col")
-    printf "%s%s%s ↩ %s\n" "$(tput cuu 1)${esc_hpa_col-}" "$(tput bold)$(tput "set""af" 1)" "$_status" "$(tput sgr0)"
+    printf "%s%s%s %s %s\n" "$(tput cuu 1)${esc_hpa_col-}" "$(tput bold)$(tput "set""af" 1)" '↩' "$_status" "$(tput sgr0)"
   }
   echo
 '
@@ -309,7 +378,7 @@ declare countdown_call="count_down ${opts['restart-delay']}"
   [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
   # language=sh
   cat <<'INSTRUMENTATION'
-# Restarts in the specified amount of seconds
+# Restarts in the specified number of seconds
 count_down() {
   local seconds=${1:-5}
   tput civis
@@ -322,19 +391,24 @@ count_down() {
 
 declare _status=0
 # Simulates a user typing in the specified command and executes it.
+# Reads STDIN if no argument is passed.
 rec() {
   local prompt="❱ "
   printf '%s%s' "$(tput 'set''af' 7)$prompt" "$(tput 'c''norm')"
   sleep 1
   local i j s min=10
-  printf -v s '%q ' "$@"
-  s=${s:0:$((${#s} -1))}
-  [ ! "${TESTING-}" ] || min=99999
+  if [ "$#" -eq 0 ]; then
+    set -- -1 eval "$(cat -)"
+  else
+    printf -v s '%q ' "$@"
+    s=${s:0:$((${#s} -1))}
+  fi
   # rec -n suppresses output of the first n arguments
   [[ ! "${1-}" =~ -[0-9]+ ]] || {
     s=${*:$((${1#-} +2))}
     shift
   }
+  [ ! "${TESTING-}" ] || min=99999
   for ((i = 0, j = 0; i < ${#s}; i = i + j, j = "$min" + (RANDOM % 5))); do
     printf '%s' "${s:i:j}" && sleep .04
   done
@@ -367,16 +441,15 @@ INSTRUMENTATION
 [ ! -e "$cast_file" ] || rm -- "$cast_file"
 (
   [ ! "${flags['hide-recording']}" = true ] || exec &>/dev/null
-  HISTFILE='' \
-    HISTIGNORE='*' \
+    export TMPDIR
     TERM=${opts['term']-} \
     asciinema rec \
     --command "bash '$recordable_file'" \
     --quiet \
     "$cast_file"
-)
+) || logr error "ERROR WHILE RECORDING"
 
-echo " ${esc_yellow-}◕${esc_reset-} ${esc_bold-}CONVERTING ${cast_file#./}${esc_reset-}"
+echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}"
 declare -a svg_term_args=()
 [ ! -e "$svg_file" ] || rm -- "$svg_file"
 [ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
@@ -392,38 +465,49 @@ svg-term \
   --padding-x 20 \
   --padding-y 20 \
   ${svg_term_args[@]+"${svg_term_args[@]}"} \
-  --window
+  --window || logr error "ERROR WHILE CONVERTING"
 
 [ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
-cp "$svg_file" "$svg_file.0"
+cp "$svg_file" "$svg_file.0" || logr fail -x "$svg_file"
 
 # post-process SVG
+echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${svg_file#./}.0${esc_reset-}"
 # replace deprecated xmlns:xlink by xlink, see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
 declare svg css=''
 svg=$(
-  sed -E \
+  LC_ALL=C sed \
     -e 's, xmlns:xlink="http://www.w3.org/1999/xlink",,g' \
     -e 's,xlink:href,href,g' \
     -e 's, font-family="[^"]*", class="container",g' \
-    "$svg_file" \
+    "$svg_file.0" \
     | tee "$svg_file.1"
-) || touch "$svg_file.err"
+)
 
 # highlight links
-declare term_link='https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda'
+echo " ${esc_yellow-}◕${esc_reset-} LINKING: ${esc_bold-}${svg_file#./}.1${esc_reset-}"
 svg=$(
-  title='Displayed as link in selected terminal emulators'
-  printf '%s' "$svg" \
-    | sed -E 's,(<text[^>]*>((http|https|mailto):[^<]*)</text>),<a href="'"$term_link"'"><title>'"$title"'</title>\1</a>,g' \
+  title='Displayed as link in supporting terminal emulators'
+  optional='\{0\,1\}'
+  plus='\{1\,\}'
+  schema='[^:/?#<]'"$plus"
+  host='\(//[^/?#<]*\)'"$optional"
+  path='[^?#<]*'
+  query='\(\?[^#<]*\)'"$optional"
+  hash='\(#\([^<]*\)\)'"$optional"
+  url='\('"$schema:$host$path$query$hash"'\)'
+  LC_ALL=C sed 's,\(<text[^>]*>'"$url"'[^<]*</text>\),<a href="\2"><title>'"$title"'</title>\1</a>,g' \
+    "$svg_file.1" \
     | tee "$svg_file.2"
-) || touch "$svg_file.err"
+)
+cp "$svg_file.1" "$svg_file.2"
 
 # highlight inserted line feeds
+echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${svg_file#./}.2${esc_reset-}"
 svg=$(
-  printf '%s' "$svg" \
-    | sed -E 's,<path[^>]*>(<text[^>]*>)␊<,\1<tspan class=\"inserted-lf\">⮐</tspan><,g' \
+  LC_ALL=C sed 's,<path[^>]*>\(<text[^>]*>\)␊<,\1<tspan class="inserted-lf">⮐</tspan><,g' \
+    "$svg_file.2" \
     | tee "$svg_file.3"
-) || touch "$svg_file.err"
+)
 css+=".inserted-lf{fill:#999999;fill-opacity:.75;font-variant-position:sub;font-size:75%}"
 
 # patch fonts
@@ -450,8 +534,8 @@ css+=".container>g>svg>svg>*{transform: scaleY(.95);}"
 # write back SVG
 printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 
-[ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file \`$svg_file\` unexpectedly missing" --stacktrace
+[ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file '$svg_file' unexpectedly missing" --stacktrace
 [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
 [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']}" = false ] || rm -- "$svg_file"
 [ "${flags['delete-build']}" = false ] || rm -- "$recordable_file" "$cast_file"
-logr success "${esc_bold-}COMPLETED ${svg_file#./}${esc_reset-}"
+echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${svg_file#./}${esc_reset-}"

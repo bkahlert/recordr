@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - given-names: "Björn"
+    family-names: "Kahlert"
+    orcid: "https://orcid.org/0000-0003-1705-4067"
+title: "Recordr — automated terminal session recorder and SVG converter"
+version: TODO
+date-released: TODO
+url: "https://github.com/bkahlert/recordr"

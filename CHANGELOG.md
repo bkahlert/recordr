@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 ### Added
-- `author` authoring tool to create rec files easily
-- `recordrw` self-contained wrapper to run Recordr with minimal effort
+- facilitated creation of rec files using interpreter `#!/usr/bin/env recordr`
+- `recordrw` self-contained wrapper to run Recordr with minimal effort,
+  e.g. as a one-liner:
+  ```shell
+  curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+  ```
 
 ### Changed
 *none*

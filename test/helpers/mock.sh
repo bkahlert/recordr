@@ -39,13 +39,7 @@ SVG_FILE
 '
 }
 
-# Invokes `recordr` with the specified arguments but mocked dependencies `asciinema` and `svg-term`.
+# Prints the path of an executable `recordr` that has mocked dependencies `asciinema` and `svg-term`.
 mocked_recordr() {
-  local -a parts=(
-    "#!/usr/bin/env bash"
-    "$(asciinema_mock test.cast)"
-    "$(svg-term_mock test.svg.0)"
-    "$BATS_CWD/recordr \"\$@\""
-  )
-  "$(mkfile +x "${parts[@]}")" "$@"
+  make_interpretable '#!/usr/bin/env bash' <(asciinema_mock test.cast) <(svg-term_mock test.svg.0) - <<<"$BATS_CWD/recordr"' "$@"'
 }

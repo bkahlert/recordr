@@ -1,0 +1,2 @@
+#!/usr/bin/env recordr
+rec echo "Hello World!"

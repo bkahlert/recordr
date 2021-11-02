@@ -20,6 +20,7 @@ COMMANDS
 SEQUENCES
 }
 
+# TODO remove author and update
 # To create tests:
 # - add test commands to `author`
 # - execute `author`
@@ -212,7 +213,7 @@ output\r\n
 SEQUENCES
 }
 
-@test "should hide specified amount of arguments" {
+@test "should hide specified number of arguments" {
   assert_cast_contains <(
     record <<COMMANDS
 hidden() {
@@ -223,6 +224,17 @@ rec -1 hidden echo output
 COMMANDS
   ) <<SEQUENCES
 doing hidden stuff\r\necho output\r\n
+\r\n
+SEQUENCES
+}
+
+@test "should read STDIN if no arguments specified" {
+  assert_cast_contains <(
+    record <<COMMANDS
+echo 'echo foo; echo bar' | rec
+COMMANDS
+  ) <<SEQUENCES
+foo\\r\\nbar\\r\\n"
 \r\n
 SEQUENCES
 }

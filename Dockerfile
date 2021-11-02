@@ -12,6 +12,7 @@ ARG PUID=1000
 ARG PGID=1000
 
 # dependencies
+# as of 2021-06-21 BusyBox's sed does not seem to properly support curly quantifiers; therefore GNU sed
 RUN apk --no-cache --update add \
     asciinema \
     bash \
@@ -22,6 +23,7 @@ RUN apk --no-cache --update add \
     expect \
     nodejs \
     npm \
+    sed \
     shadow \
  && npm install -g svg-term-cli
 

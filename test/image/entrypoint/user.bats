@@ -21,27 +21,24 @@ teardown() {
 
 @test "should change user ID to 1000 by default" {
   mkdir rec && printf 'printf "%b" "%b"' "$pattern" "$puid" >rec/test.rec
-  IMAGE_PUID='' image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp test.rec
+  IMAGE_PUID='' image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp rec/test.rec
   assert_line --partial "> 1000 <"
 }
 
 @test "should change group ID to 1000 by default" {
   mkdir rec && printf 'printf "%b" "%b"' "$pattern" "$pgid" >rec/test.rec
-  IMAGE_PGID='' image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp test.rec
+  IMAGE_PGID='' image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp rec/test.rec
   assert_line --partial "> 1000 <"
 }
 
 @test "should change user ID to specified ID" {
   mkdir rec && printf 'printf "%b" "%b"' "$pattern" "$puid" >rec/test.rec
-  IMAGE_PUID="echo 2000" image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp test.rec
+  IMAGE_PUID="echo 2000" image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp rec/test.rec
   assert_line --partial "> 2000 <"
 }
 
 @test "should change group ID to specified ID" {
   mkdir rec && printf 'printf "%b" "%b"' "$pattern" "$pgid" >rec/test.rec
-  IMAGE_PGID="echo 2000" image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp test.rec
+  IMAGE_PGID="echo 2000" image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp rec/test.rec
   assert_line --partial "> 2000 <"
 }
-
-# TODO delete mkfile
-# TODO rename cp_fixture

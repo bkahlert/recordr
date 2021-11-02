@@ -27,7 +27,6 @@
 
 set -o nounset
 set -o pipefail
-set -o posix
 set -o errtrace
 
 declare -r -g EX_OK=0
@@ -55,14 +54,17 @@ declare -r -g LOGR_VERSION=SNAPSHOT
 declare -r -g BANR_CHAR=▔
 declare -r -g MARGIN='   '
 declare -r -g LF=$'\n'
-
-declare -r -g ESC_OSC="\e]"   # operating system command
+declare -r -g ESC=$'\x1B'
+declare -r -g ESC_CSI="$ESC"'['  # control sequence intro
+declare -r -g ESC_OSC="$ESC"']'  # operating system command
 declare -r -g ESC_ST="\e\\\\" # string terminator
-declare -r -g ESC_PATTERN="s/\(\
-${ESC_OSC}8;\([^;]\)*;[^"$'\e'"]*${ESC_ST}\
-\|\
-\e[\[(][(0-9;]*[a-zA-Z]\
-\)//g;"
+declare -a -r -g ESC_PATTERNS=(
+  's|'"$ESC_OSC"'[[:digit:]]*\;[^'"$ESC"']*'"$ESC"'\\||g;' # OSC escape sequences
+  's|'"$ESC"'[@-Z\\-_]||g;' # Fe escape sequences
+  's|'"$ESC"'[ -/][@-~]||g;' # 2-byte sequences
+  's|'"$ESC_CSI"'[0-?]*[ -/]*[@-~]||g;' # CSI escape sequences
+)
+printf -v ESC_PATTERN '%s' "${ESC_PATTERNS[@]}"
 
 (return 2>/dev/null) || set -- "$@" "-!-"
 
@@ -183,15 +185,15 @@ util() {
   # bashsupport disable=BP2001
   case $1 in
     remove_ansi)
-      args=() usage="${usage%UTIL*}$1 FORMAT [ARGS...]"
+      args=() cleansed=() usage="${usage%UTIL*}$1 FORMAT [ARGS...]"
       shift
       [ $# -gt 0 ] || logr error "format missing" --usage "$usage" --stacktrace -- "$@"
+      for text in "${@}" ; do
+          cleansed+=("$(echo "$text" | sed "$ESC_PATTERN")")
+      done
       # shellcheck disable=SC2059
-      printf -v util_text "$@"
-      util_text=$(printf '%b' "$util_text" | sed -e "$ESC_PATTERN")
-      #      printf -v util_text "$@"
-      #      printf -v util_text '%b' "$util_text"
-      #      util_text=${util_text//$'\033'[\[(][(0-9;]*[a-zA-Z]/X}
+      printf -v util_text "${cleansed[@]}"
+      util_text=$(echo "$util_text" | sed -e "$ESC_PATTERN")
       ;;
 
     center)
@@ -467,8 +469,8 @@ spinner() {
     stop)
       shift
       [ $# = 0 ] || logr error "unexpected argument" --usage "$usage" --stacktrace -- "$@"
-      if jobs -p 'spinner _spin' >/dev/null 2>/dev/null; then
-        jobs -p 'spinner _spin' | xargs -r kill
+      if jobs -pr 'spinner _spin' >/dev/null 2>/dev/null; then
+        jobs -pr 'spinner _spin' | xargs -r kill
       fi
       ;;
     _spin)
@@ -496,7 +498,7 @@ spinner() {
 # Globals:
 #   BANR_CHAR - the default char to use
 # Arguments:
-#   --indent - Either the amount of whitespaces or the string itself to prepend the banner with (default: 1)
+#   --indent - Either the number of whitespaces or the string itself to prepend the banner with (default: 1)
 #   --static - If specified, not animation will take place; optionally can be set to a pattern that controls the design.
 #              Format: colon (:) separated list of space separated key-value pairs, e.g. `char=A : char=B state=1` specifies
 #                      the first banner char as an `A`, the second as a `B` with bright colors and the remaining chars as default.
@@ -623,8 +625,7 @@ headr() {
 #   1 - error
 #   * - signal
 logr() {
-  code=$?
-  local inv=("$@") args=() usage="[-i | --inline] COMMAND [ARGS...]" inline
+  local inv=("$@") args=() code=${LOGR_ALIAS_CODE:-$?} usage="[-i | --inline] COMMAND [ARGS...]" inline
   while (($#)); do
     case $1 in
       -i | --inline)
@@ -656,59 +657,83 @@ logr() {
      warning     Log a warning
      error       Log an error
      failure     Log an error and terminate
+
 '
       exit "$EX_OK"
       ;;
     _init)
       shift
-      # ERR handler
-      _err() {
-        logr _cleanup
-        local meta && printf -v meta '%s%%s%s' "${esc_dim-}" "${esc_reset-}"
-        [ "$1" -eq "$EX_NEG_USR_RESP" ] && exit $EX_NEG_USR_RESP
-        logr fatal "%s $meta %d\n  $meta %s" "$2" 'returned' "$1" 'at' "$3"
+      # Registers signal_handler to run when the shell receives one of the specified signals.
+      handle() {
+        [ ! "${_Dbg_DEBUGGER_LEVEL-}" ] || return 0
+        local args=('$?' '"${BASH_COMMAND:-?}"' '"${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?})"')
+        for signal in "$@" ; do
+          trap 'signal_handler '"$signal ${args[*]}" "$signal" || die "Failed to set trap for $signal"
+        done
       }
-      # HUP QUIT TERM handler
-      _term() {
-        logr _cleanup
-        local meta && printf -v meta '%s%%s%s' "${esc_dim-}" "${esc_reset-}"
-        logr warn "%s $meta %d\n  $meta %s" "$2" 'returned (HUP QUIT TERM)' "$1" 'at' "$3"
-        logr error --name "${0##*/}" --code "$1" Terminated
+      # Unified signal handler run when shell receives signals earlier registered using handle.
+      signal_handler() {
+        local signal="$1" status="$2" command="$3" location="$4"
+        case $signal in
+        EXIT)
+          logr _cleanup
+#          trap - ERR EXIT
+#          exit "$status"
+          ;;
+        HUP)
+          logr _cleanup
+          trap - "$signal" && kill -s "$signal" "$$"
+          ;;
+        INT | TERM)
+          if logr _cleanup; then
+            logr success --name "${0##*/}" "terminated"
+          else
+            logr error --name "${0##*/}" "failed to cleanup"
+          fi
+          trap - "$signal" && kill -s "$signal" "$$"
+          ;;
+        ERR)
+          logr _cleanup
+          [ "${status:-1}" -ne 0 ] || return 0
+          status="${esc_red-}${status:-?} ${ICONS['exit']}${esc_reset-}"
+          logr fatal --name "${0##*/}" "%s %s\n     %s %s" "$status" "$command" 'at' "$location"
+          ;;
+        esac
       }
-      # INT handler
-      _int() {
-        logr _cleanup
-        local meta && printf -v meta '%s%%s%s' "${esc_dim-}" "${esc_reset-}"
-        logr new "%s $meta %d\n  $meta %s" "$2" 'returned (INT)' "$1" 'at' "$3"
-        (logr error --name "${0##*/}" --code "$1" Interrupted) || true
-        trap - INT && kill -s INT "$$"
-      }
-      if [ ! "${_Dbg_DEBUGGER_LEVEL-}" ]; then
-        trap '_err $? "${BASH_COMMAND:-?}" "${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?})"' ERR
-        trap '_term $? "${BASH_COMMAND:-?}" "${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?})"' HUP QUIT TERM
-        trap '_int $? "${BASH_COMMAND:-?}" "${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?})"' INT
-      fi
+      handle EXIT HUP INT TERM ERR # no QUIT one's not supposed to cleanup
       esc cursor_hide
       ;;
     _cleanup)
       shift
       esc cursor_show
       local job_pid
-      for job_pid in $(jobs -p); do
+      for job_pid in $(jobs -pr); do
         kill "$job_pid" &>/dev/null || true
       done
       ;;
 
-    created | added | item | success | info)
+    created | added | item | info)
       local usage="${usage%COMMAND*}$1 FORMAT [ARGS...]"
       local _rs
       util -v _rs print --icon "$1" "${@:2}"
       [ ! "${inline-}" ] || _rs="${_rs# }"
       echo "$_rs"
       ;;
-    warning | error | failure)
+
+    # TODO
+#    EX_*)
+#      local
+#       Parses this script for a line documenting the parameter and returns the comment.
+#      describe() { sed -En "/declare -r -g $1=.*#/p" "${BASH_SOURCE[0]}" | sed -E 's/[^#]*#[[:space:]]*(.*)$/\1/g'; }
+#
+#      local err_message=$(describe $1)
+#      logr error --code "$1" "$2 is missing a value -- $err_message" --usage "$usage" -- "${@}"
+#      ;;
+
+    success | warning | error | failure)
       local command=$1 call_offset=0
       local usage="${usage%COMMAND*}$1 [-c|--code CODE] [-n|--name NAME] [-u|--usage USAGE] [FORMAT [ARGS...]] [--] [INVOCATION...]" && shift
+      [ "$command" = success ] || [ "$command" = warning ] || [ "$code" -ne 0 ] || code=1 # default code for errors
       [ ! "${LOGR_ALIAS-}" ] || call_offset=1
       local name=${FUNCNAME[$((1 + call_offset))]:-?} format=() usage_opt stacktrace=() print_call idx
       [ ! "${name-}" = main ] || name=${BASH_SOURCE[$((${#BASH_SOURCE[@]} - 1))]##*/}
@@ -764,16 +789,20 @@ logr() {
       # shellcheck disable=SC2059
       [ "${#format[@]}" -eq 0 ] || printf -v formatted -- "${format[@]}"
       case $command in
+        success)
+          printf -v formatted '%s %s %s%s%s\n' "${esc_green-}" "${ICONS["$command"]}" "$invocation" \
+            "${formatted+: "${esc_bold-}${formatted}${esc_stout_end-}"}" "${esc_reset-}"
+          ;;
         warning)
-          printf -v formatted '\n%s %s %s%s%s\n' "${esc_yellow-}" "${ICONS["$command"]}" "$invocation" \
+          printf -v formatted '%s %s %s%s%s\n' "${esc_yellow-}" "${ICONS["$command"]}" "$invocation" \
             "${formatted+: "${esc_bold-}${formatted}${esc_stout_end-}"}" "${esc_reset-}"
           ;;
         failure)
-          printf -v formatted '\n%s %s %s failed%s%s\n' "${esc_red-}" "${ICONS["$command"]}" "$invocation" \
+          printf -v formatted '%s %s %s failed%s%s\n' "${esc_red-}" "${ICONS["$command"]}" "$invocation" \
             "${formatted+: "${esc_bold-}${formatted}${esc_stout_end-}"}" "${esc_reset-}"
           ;;
         *)
-          printf -v formatted '\n%s %s %s%s%s\n' "${esc_red-}" "${ICONS["$command"]}" "$invocation" \
+          printf -v formatted '%s %s %s%s%s\n' "${esc_red-}" "${ICONS["$command"]}" "$invocation" \
             "${formatted+: "${esc_bold-}${formatted}${esc_stout_end-}"}" "${esc_reset-}"
           ;;
       esac
@@ -781,10 +810,10 @@ logr() {
       [ ${#stacktrace[@]} -eq 0 ] || formatted+="$(printf '     at %s\n' "${stacktrace[@]}")$LF"
       [ ! "${usage_opt-}" ] || formatted+="   Usage: $name ${usage_opt//$LF/$LF   }$LF"
 
-      printf '%s\n' "$formatted" >&2
+      printf '%s' "$formatted" >&2
 
-      if [ "$command" = warning ]; then
-        return "${code:-1}"
+      if [ "$command" = success ] || [ "$command" = warning ]; then
+        return "${code:-0}"
       else
         exit "${code:-1}"
       fi
@@ -948,7 +977,7 @@ logr() {
       [ "${original}" ] || logr error "unknown command" --usage "$usage" -- "$@"
 
       shift
-      LOGR_ALIAS=$alias logr ${inline+"--inline"} "$original" "$@"
+      LOGR_ALIAS=$alias LOGR_ALIAS_CODE=$code logr ${inline+"--inline"} "$original" "$@" || return "$?"
       ;;
   esac
 }
@@ -1065,6 +1094,7 @@ main() {
     ['file']="${esc_blue-}↗$r"
     ['task']="${esc_yellow-}⚙$r"
     ['nested']="${esc_yellow-}❱$r"
+    ['exit']="${esc_bold-}${esc_red-}↩$r"
     ['success']="${esc_green-}✔$r"
     ['info']="${esc_white-}ℹ$r"
     ['warning']="${esc_bold-}${esc_yellow-}!$r"
@@ -1128,7 +1158,7 @@ $(
       "${esc_yellow-}"'source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/logr.sh"'"${esc_reset-}"
     logr info "%s\n%s\n" "To source logr ${esc_bold-}relative to your script${esc_reset-} add:" \
       "${esc_yellow-}"'source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/RELATIVE_PATH/logr.sh"'"${esc_reset-}"
-    logr info "%s\n%s" "And for the more adventurous:" \
+    logr info "%s\n%s\n" "And for the more adventurous:" \
       "${esc_yellow-}"'source <(curl -LfsS https://git.io/logr.sh)'"${esc_reset-}"
   )"
 }

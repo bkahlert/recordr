@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env recordr
 
 echo
 
@@ -13,7 +13,7 @@ indent_command() {
   echo "$indent${*//$lf/$lf$indent}"
 }
 
-# displays the cursor and waits for the specified amount of seconds
+# displays the cursor and waits for the specified number of seconds
 pause() {
   local duration=${1:-2}
   [ ! "${TESTING-}" ] || duration=0

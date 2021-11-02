@@ -1,0 +1,9 @@
+#!/usr/bin/env recordr
+
+rec <<'EVAL'
+./recordr rec/hello-world.rec
+EVAL
+
+rec <<'EVAL'
+TESTING=1 ./recordr rec/hello-world.rec
+EVAL
