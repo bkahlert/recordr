@@ -22,68 +22,7 @@ teardown() {
    Options:
      --'
   assert_line '     --out-dir              path to copy the created SVG files to (default: docs/)'
-  assert_output --partial "
-   Files:
-     There are basically two ways to specify which ● rec files to convert:
-     - Convert a single file: ./recordr rec/foo.rec
-       same as: ./rec/foo.rec (interpreter form)
-       same as: ./recordr --build-dir build/rec --out-dir docs rec/foo.rec (explicit directories)
-
-       Before:
-       ▤ work             ⬅︎ you are here
-       └─▤ rec
-         ├─● foo.rec
-         └─▤ bar
-           └─● baz.rec
-
-       After:
-       ▤ work             ⬅︎ you are here
-       ├─▤ rec
-       │ ├─● foo.rec
-       │ └─▤ bar
-       │   └─● baz.rec
-       ├─▤ build
-       │ └─▤ rec
-       │   ├─▢ foo.sh
-       │   ├─▢ foo.svg.0
-       │   ├─▢ foo.svg.⋮
-       │   └─▢ foo.svg.n
-       └─▤ docs
-         └─● foo.svg      ⬅︎ to SVG converted ● rec file
-
-     - Convert a file tree: ./recordr rec
-       same as: ./recordr (default directory: rec)
-       same as: ./recordr --build-dir build/rec --out-dir docs rec (explicit default directories)
-       same as: ./recordr rec foo.rec bar/baz.rec (explicit files)
-
-       Before:
-       ▤ work             ⬅︎ you are here
-       └─▤ rec
-         ├─● foo.rec
-         └─▤ bar
-           └─● baz.rec
-
-       After:
-       ▤ work             ⬅︎ you are here
-       ├─▤ rec
-       │ ├─● foo.rec
-       │ └─▤ bar
-       │   └─● baz.rec
-       ├─▤ build
-       │ └─▤ rec
-       │   ├─▢ foo.sh
-       │   ├─▢ foo.svg.0
-       │   ├─▢ foo.svg.⋮
-       │   ├─▢ foo.svg.n
-       │   └─▤ bar
-       │     ├─▢ baz.sh
-       │     ├─▢ baz.svg.0
-       │     ├─▢ baz.svg.⋮
-       │     └─▢ baz.svg.n
-       └─▤ docs
-         ├─● foo.svg      ⬅︎ to SVG converted ● rec file
-         └─▤ bar
-           └─● baz.svg    ⬅︎ to SVG converted ● rec file"
+  assert_output --partial "└─● baz.svg    ⬅︎ to SVG converted ● rec file"
 }
 
 @test "should convert rec dir by default" {
