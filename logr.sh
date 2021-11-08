@@ -1136,7 +1136,7 @@ main() {
   require_shopt globstar            # ** matches all files and any number of dirs and sub dirs
   stty -echoctl 2>/dev/null || true # don't echo control characters in hat notation (e.g. `^C`)
 
-  [ "${TESTING-}" ] || logr _init
+  logr _init
 
   [ ! "${RECORDING-}" ] || return "$EX_OK"
   [[ " $* " == *" -!- "* ]] || return "$EX_OK"

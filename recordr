@@ -342,7 +342,10 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
   declare count
   for file in "${@:2}"; do
     tmp=$(mktemp "${opts['build-dir']%/}/status-XXXXXX")
-    ("$0" "${args[@]}" "$1" "$file" || echo "$?" >"$tmp") &
+    (
+      "$0" "${args[@]}" "$1" "$file" || echo "$?" >"$tmp"
+      [ "$(cat "$tmp")" ] || echo "0" >"$tmp"
+    ) &
     exit_codes["$!"]="$tmp"
     while true; do
       count="$(jobs -pr | sed -n '$=')"
@@ -354,7 +357,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
   declare failed=0 exit_code
   wait "${!exit_codes[@]}" || true
   for tmp in "${exit_codes[@]}"; do
-    exit_code=0
+    exit_code=''
     [ ! -f "$tmp" ] || {
       exit_code=$(cat "$tmp")
       rm -- "$tmp"
