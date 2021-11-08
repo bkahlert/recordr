@@ -76,7 +76,7 @@ find_term_profile() {
 }
 
 declare -A opts=(
-  ['build-dir']=build/rec/ # path to store (intermediate) build artifacts in
+  ['build-dir']=build/rec/ # path to store (intermediate) build artifacts
   ['out-dir']=docs/        # path to copy the created SVG files to
   ['term']=xterm-256color  # value to use for the TERM environmental variable
   ['indicator']=RECORDING  # name of the environmental variable set during recording
@@ -475,7 +475,7 @@ INSTRUMENTATION
     asciinema rec \
     --command "bash '$recordable_file'" \
     --quiet \
-    "$cast_file"
+    "$cast_file" >&2
 ) || logr error "ERROR WHILE RECORDING $BASHPID $$ $?"
 
 echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
@@ -568,4 +568,5 @@ printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']:-false}" = false ] || rm -- "$svg_file" "$svg_file".*
 [ "${flags['delete-build']:-false}" = false ] || rm -- "$recordable_file" "$cast_file"
 echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
-[ -t 1 ] || echo "${out_svg_file#./}"
+
+[ -t 2 ] || echo "${out_svg_file#./}"
