@@ -70,7 +70,7 @@ The following options can be used to customize the conversion:
 - `--columns` — number of columns to use for recording and conversion (default: 132)
 - `--parallel` — maximum number of conversions that run at once; 0 will run as many conversions as possible (default: 4)
 - `--restart-delay` — number of seconds until the animation restart (default: 5)
-- `--build-dir` — path to store (intermediate) build artifacts in (default: build/rec/)
+- `--build-dir` — path to store (intermediate) build artifacts (default: build/rec/)
 - `--term-profile` — path to the terminal profile to use for conversion (default: auto)
 - `--hide-recording` — whether to hide the recording process (default: false)
 - `--delete-build` — whether to delete intermediary build files on completion (default: false)
