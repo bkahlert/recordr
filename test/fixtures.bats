@@ -35,6 +35,18 @@ recording() {
   echo "$file"
 }
 
+@test "should have working hello-world.rec" {
+  TERM=xterm run bash "$(recording "hello-world.rec")"
+  assert_success
+  assert_line "Hello World!"
+}
+
+@test "should have working recording-hello-world.rec" {
+  run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-hello-world.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
+
+  assert_output --partial " ● COMPLETED: build/rec/hello-world.svg"
+}
+
 @test "should have working demo.rec" {
   TERM=xterm run bash "$(recording "demo.rec")"
 
@@ -87,17 +99,4 @@ uTyyyyyy3uuuuuw_'gy~we "~~~~~~~~'     :
                  ^ .
 NYAN-CAT
   )
-}
-
-
-@test "should have working hello-world.rec" {
-  TERM=xterm run bash "$(recording "hello-world.rec")"
-  assert_success
-  assert_line "Hello World!"
-}
-
-@test "should have working recording-hello-world.rec" {
-  run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-hello-world.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
-
-  assert_output --partial " ● COMPLETED: build/rec/hello-world.svg"
 }

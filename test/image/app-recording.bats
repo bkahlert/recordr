@@ -20,7 +20,7 @@ COMMANDS
 SEQUENCES
 }
 
-# TODO remove author and update
+# TODO update
 # To create tests:
 # - add test commands to `author`
 # - execute `author`

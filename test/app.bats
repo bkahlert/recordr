@@ -39,7 +39,7 @@ setup() {
 }
 
 @test "should record all rec files in specified recordings directory" {
-  run bash  "$(mocked_recordr)" rec/
+  run bash "$(mocked_recordr)" rec/
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
@@ -61,7 +61,7 @@ setup() {
 }
 
 @test "should record all specified rec files relative to recordings directory contained in first file" {
-  run bash  "$(mocked_recordr)" rec/foo.rec bar/baz.rec
+  run bash "$(mocked_recordr)" rec/foo.rec bar/baz.rec
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
@@ -83,7 +83,7 @@ setup() {
 }
 
 @test "should record all specified rec files relative to specified recordings directory" {
-  run bash  "$(mocked_recordr)" rec foo.rec bar/baz.rec
+  run bash "$(mocked_recordr)" rec foo.rec bar/baz.rec
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
@@ -105,7 +105,7 @@ setup() {
 }
 
 @test "should record single specified rec file relative to its self-contained recordings directory" {
-  run bash  "$(mocked_recordr)" rec/foo.rec
+  run bash "$(mocked_recordr)" rec/foo.rec
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_line " ● RECORDING: rec/foo.rec"
@@ -117,7 +117,7 @@ setup() {
 }
 
 @test "should skip invalid files" {
-  run bash  "$(mocked_recordr)" rec/foo.rec rec/bar/baz.rec
+  run bash "$(delayed_recordr)" rec/foo.rec rec/bar/baz.rec
   assert_failure
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_line "●◕ BATCH PROCESSING"
@@ -227,7 +227,7 @@ setup() {
   copy_fixture .itermcolors rec/foo.itermcolors
   copy_fixture .itermcolors rec/bar/baz.itermcolors
   run bash "$(mocked_recordr)" --build-dir . rec/foo.rec
-  assert_file_contains svg-term.args " --profile $PWD/rec/bar/baz.iterm""colors"
+  assert_file_contains svg-term.args " --profile $PWD/.*.iterm""colors"
 }
 @test "should use specified term-profile" {
   copy_fixture .itermcolors rec/foo.itermcolors
@@ -248,7 +248,7 @@ setup() {
 }
 
 @test "should record in parallel by default" {
-  run bash "$(mocked_recordr)" --build-dir . rec/foo.rec bar/baz.rec
+  run bash "$(delayed_recordr)" --build-dir . rec/foo.rec bar/baz.rec
   output=${output//test2/test}
   assert_output --regexp " ● RECORDING: rec\/(foo|bar\/baz).rec
  ● RECORDING: rec\/(foo|bar\/baz).rec"

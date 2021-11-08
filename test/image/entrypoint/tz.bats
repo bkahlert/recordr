@@ -1,8 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  # TODO move build_tag to setup.sh
-  load ../helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
+  load ../helpers/setup.sh
 }
 
 teardown() {

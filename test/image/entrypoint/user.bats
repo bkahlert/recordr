@@ -2,7 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
-  load ../helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
+  load ../helpers/setup.sh
   declare -r -g pattern='> %d <\n'
   declare -r -g puid='$(id -u)'
   declare -r -g pgid='$(id -g)'

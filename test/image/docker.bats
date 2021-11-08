@@ -2,7 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
-  load helpers/setup.sh "$BUILD_TAG?unspecified image to test}"
+  load helpers/setup.sh
 }
 
 teardown() {

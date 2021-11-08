@@ -43,3 +43,13 @@ SVG_FILE
 mocked_recordr() {
   make_interpretable '#!/usr/bin/env bash' <(asciinema_mock test.cast) <(svg-term_mock test.svg.0) - <<<"$BATS_CWD/recordr"' "$@"'
 }
+
+# Prints the path of an executable `recordr` that has mocked dependencies `asciinema` and `svg-term`
+# with `asciinema` delaying execution by 1 second.
+delayed_recordr() {
+  local delayed_recordr source
+  delayed_recordr=$(mocked_recordr)
+  source=$(cat "$delayed_recordr")
+  echo "${source//asciinema() {/asciinema() {$'\n'sleep 1}" >"$delayed_recordr"
+  echo "$delayed_recordr"
+}

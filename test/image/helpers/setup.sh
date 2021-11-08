@@ -13,6 +13,7 @@ load_lib assert
 load_lib file
 
 cd "$BATS_TEST_TMPDIR" || exit 1
+[ "${BUILD_TAG-}" ] || fail "unspecified image to test"
 
 export IMAGE_PUID="id -u"
 export IMAGE_PGID="id -g"

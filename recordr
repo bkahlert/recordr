@@ -311,7 +311,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
   done
 
   declare -A exit_codes=()
-  declare count process
+  declare count
   for file in "${@:2}"; do
     tmp=$(mktemp "${opts['build-dir']%/}/status-XXXXXX")
     ("$0" "${args[@]}" "$1" "$file" || echo "$?" >"$tmp") &
@@ -319,9 +319,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
     while true; do
       count="$(jobs -pr | sed -n '$=')"
       [ "${count:-0}" -ge "${opts['parallel']}" ] || break
-      exit_code=0
-      wait -n -p process || exit_code=$?
-      exit_codes["${process}"]="$exit_code"
+      wait -n -p process || true
     done
   done
 
