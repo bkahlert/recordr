@@ -244,7 +244,7 @@ bats() {
   fi
 
   local -r -a BATS_ARGS=(
-    --jobs "$(nproc || echo 4)"
+    --jobs "$(nproc 2>/dev/null || echo 4)"
     --no-parallelize-within-files
     --recursive
     --timing

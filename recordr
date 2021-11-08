@@ -76,15 +76,15 @@ find_term_profile() {
 }
 
 declare -A opts=(
-  ['build-dir']=build/rec/        # path to store (intermediate) build artifacts in
-  ['out-dir']=docs/               # path to copy the created SVG files to
-  ['term']=xterm-256color         # value to use for the TERM environmental variable
-  ['indicator']=RECORDING         # name of the environmental variable set during recording
-  ['columns']=132                 # number of columns to use for recording and conversion
-  ['rows']=25                     # number of rows to use for recording and conversion
-  ['restart-delay']=5             # number of seconds until the animation restart
-  ['term-profile']=auto           # path to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
-  ['parallel']=$(nproc || echo 4) # maximum number of conversions that run at once; 0 will run as many conversions as possible
+  ['build-dir']=build/rec/ # path to store (intermediate) build artifacts in
+  ['out-dir']=docs/        # path to copy the created SVG files to
+  ['term']=xterm-256color  # value to use for the TERM environmental variable
+  ['indicator']=RECORDING  # name of the environmental variable set during recording
+  ['columns']=132          # number of columns to use for recording and conversion
+  ['rows']=25              # number of rows to use for recording and conversion
+  ['restart-delay']=5      # number of seconds until the animation restart
+  ['term-profile']=auto    # path to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemes#supported-formats)
+  ['parallel']=auto        # maximum number of conversions that run at once; 0 will run as many conversions as possible
 )
 [ ! "${TESTING-}" ] || opts['restart-delay']=1
 declare -A flags=(
@@ -274,9 +274,9 @@ set -- "${args[@]}"
 }
 
 # validate parallel
-[ ! "${opts['parallel']}" ] || {
-  [ "${opts['parallel']}" -eq "${opts['parallel']}" ] 2>/dev/null || logr error --code "$EX_DATAERR" "invalid --parallel value '${opts['parallel']}'"
-}
+[ ! "${opts['parallel']}" = "auto" ] || opts['parallel']=$(nproc 2>/dev/null || echo 4)
+[ ! "${opts['parallel']}" ] || [ "${opts['parallel']}" -eq "${opts['parallel']}" ] 2>/dev/null \
+  || logr error --code "$EX_DATAERR" "invalid --parallel value '${opts['parallel']}'"
 
 # normalize files / pos. arguments to `base-dir` `file...`
 [ $# -gt 0 ] || set -- rec                                             # [ ] -> base
@@ -439,8 +439,8 @@ INSTRUMENTATION
 [ ! -e "$cast_file" ] || rm -- "$cast_file"
 (
   [ ! "${flags['hide-recording']}" = true ] || exec &>/dev/null
-    export TMPDIR
-    TERM=${opts['term']-} \
+  export TMPDIR
+  TERM=${opts['term']-} \
     asciinema rec \
     --command "bash '$recordable_file'" \
     --quiet \
