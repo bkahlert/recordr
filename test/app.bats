@@ -273,6 +273,10 @@ setup() {
   assert_success
   assert_file_exist build/foo.sh
   assert_file_exist build/foo.cast
+  assert_file_exist build/foo.svg.0
+  assert_file_exist build/foo.svg.1
+  assert_file_exist build/foo.svg.2
+  assert_file_exist build/foo.svg.3
   assert_file_exist build/foo.svg
 }
 @test "should delete build if specified" {
@@ -280,6 +284,10 @@ setup() {
   assert_success
   assert_file_not_exist build/foo.sh
   assert_file_not_exist build/foo.cast
+  assert_file_not_exist build/foo.svg.0
+  assert_file_not_exist build/foo.svg.1
+  assert_file_not_exist build/foo.svg.2
+  assert_file_not_exist build/foo.svg.3
   assert_file_not_exist build/foo.svg
 }
 

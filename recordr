@@ -88,14 +88,15 @@ declare -A opts=(
 )
 [ ! "${TESTING-}" ] || opts['restart-delay']=1
 declare -A flags=(
-  ['delete-build']=false   # flag that if specified will keep delete intermediary build files on completion
-  ['hide-recording']=false # flag that if specified will not show the recording process (default during batch mode)
+  ['hide-recording']=''    # whether to hide the recording process
+  ['delete-build']=''      # whether to delete intermediary build files on completion
 )
 
 declare raw=("$@") args=() usage='[OPTIONS] [DIR[/ ]FILE [FILE...]]'
 while (($#)); do
   case $1 in
     -h | --help)
+      # TODO move to logr
       # Parses this script for a line documenting the parameter and returns the comment.
       describe() { sed -En "/[[:space:]]+\['$1'].*#/p" "${BASH_SOURCE[0]}" | sed -E 's/[^#]*#[[:space:]]*(.*)$/\1/g'; }
       declare margin="$MARGIN  " options=() col_width=20
@@ -103,7 +104,7 @@ while (($#)); do
         options+=("$(printf -- '--%s%*s' "$opt" $((col_width - ${#opt})) '')" "$(describe "$opt") (default: ${opts[$opt]})")
       done
       for flag in "${!flags[@]}"; do
-        options+=("$(printf -- '--%s%*s' "$flag" $((col_width - ${#flag})) '')" "$(describe "$flag")")
+        options+=("$(printf -- '--%s%*s' "$flag" $((col_width - ${#flag})) '')" "$(describe "$flag") (default: ${flags[$flag]:-false})")
       done
       printf '\n   %s\n\n   Usage: recordr %s%s' "$(banr --static "recordr" "$RECORDR_VERSION")" "$usage" "
 
@@ -241,11 +242,19 @@ ${margin}      └─${esc_red-}●${esc_reset-} baz.svg    ⬅︎ to SVG conver
       ;;
 
       # flags
+    --delete-build=*)
+      flags['delete-build']=${1#*=} && shift
+      ;;
     --delete-build)
-      flags['delete-build']=true && shift
+      [ "${2-}" = true ] || [ "${2-}" = false ] || set -- "$1" true "${@:2}"
+      flags['delete-build']=$2 && shift 2
+      ;;
+    --hide-recording=*)
+      flags['hide-recording']=${1#*=} && shift
       ;;
     --hide-recording)
-      flags['hide-recording']=true && shift
+      [ "${2-}" = true ] || [ "${2-}" = false ] || set -- "$1" true "${@:2}"
+      flags['hide-recording']=$2 && shift 2
       ;;
 
       # unknown arguments
@@ -260,6 +269,24 @@ ${margin}      └─${esc_red-}●${esc_reset-} baz.svg    ⬅︎ to SVG conver
   esac
 done
 set -- "${args[@]}"
+
+# TODO move to logr
+logr::diag() {
+  local opt flag arg
+  echo "$0"
+  echo "  opts:"
+  for opt in "${!opts[@]}"; do
+    printf '    --%s=%q\n' "$opt" "${opts[$opt]}"
+  done
+  echo "  flags:"
+  for flag in "${!flags[@]}"; do
+    printf '    --%s=%q\n' "$flag" "${flags[$flag]}"
+  done
+  echo "  args:"
+  for (( arg = 1; arg <= $#; arg++ )); do
+    printf '    %2d=%q\n' "$arg" "${@:$arg:1}"
+  done
+}
 
 # validate build-dir
 [ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
@@ -307,10 +334,11 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
     args+=("--$opt=${opts[$opt]}")
   done
   for flag in "${!flags[@]}"; do
-    [ ! "${flags[$flag]}" = true ] || args+=("--$flag")
+    [ "${flags[$flag]:-false}" = false ] || args+=("--$flag")
   done
 
   declare -A exit_codes=()
+  trap 'kill "${!exit_codes[@]}"' INT TERM
   declare count
   for file in "${@:2}"; do
     tmp=$(mktemp "${opts['build-dir']%/}/status-XXXXXX")
@@ -331,7 +359,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
       exit_code=$(cat "$tmp")
       rm -- "$tmp"
     }
-    [ "${exit_code:-0}" -eq 0 ] || failed=$((failed + 1))
+    [ "${exit_code:--1}" -eq 0 ] || failed=$((failed + 1))
   done
 
   [ "$failed" -lt $# ] || logr fail --name "BATCH PROCESSING" >&2
@@ -438,14 +466,14 @@ INSTRUMENTATION
 
 [ ! -e "$cast_file" ] || rm -- "$cast_file"
 (
-  [ ! "${flags['hide-recording']}" = true ] || exec &>/dev/null
+  [ "${flags['hide-recording']:-false}" = false ] || exec &>/dev/null
   export TMPDIR
   TERM=${opts['term']-} \
     asciinema rec \
     --command "bash '$recordable_file'" \
     --quiet \
     "$cast_file"
-) || logr error "ERROR WHILE RECORDING"
+) || logr error "ERROR WHILE RECORDING $BASHPID $$ $?"
 
 echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
 declare -a svg_term_args=()
@@ -534,7 +562,7 @@ printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 
 [ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file '$svg_file' unexpectedly missing" --stacktrace
 [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
-[ ! "${out_svg_file-}" ] || [ "${flags['delete-build']}" = false ] || rm -- "$svg_file"
-[ "${flags['delete-build']}" = false ] || rm -- "$recordable_file" "$cast_file"
+[ ! "${out_svg_file-}" ] || [ "${flags['delete-build']:-false}" = false ] || rm -- "$svg_file" "$svg_file".*
+[ "${flags['delete-build']:-false}" = false ] || rm -- "$recordable_file" "$cast_file"
 echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
 [ -t 1 ] || echo "${out_svg_file#./}"

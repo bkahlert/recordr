@@ -72,8 +72,8 @@ The following options can be used to customize the conversion:
 - `--restart-delay` — number of seconds until the animation restart (default: 5)
 - `--build-dir` — path to store (intermediate) build artifacts in (default: build/rec/)
 - `--term-profile` — path to the terminal profile to use for conversion (default: auto)
-- `--hide-recording` — flag that if specified will not show the recording process (default during batch mode)
-- `--delete-build` — flag that if specified will keep delete intermediary build files on completion
+- `--hide-recording` — whether to hide the recording process (default: false)
+- `--delete-build` — whether to delete intermediary build files on completion (default: false)
 
 **Files:**
 There are basically two ways to specify which

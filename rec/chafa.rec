@@ -39,7 +39,7 @@ declare \
   chafa
 
 # Determine if to call chafa directory or using Docker.
-if chafa=("$(command -v chafa && [ ! "${use_docker-}" = true ])"); then
+if chafa=("$(command -v chafa && [ "${use_docker:-false}" = false ])"); then
   # shellcheck disable=SC2064
   trap "printf %s '$(tput cnorm)'" EXIT
 else
