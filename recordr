@@ -300,8 +300,8 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 [ $# -eq 2 ] || {
   declare args=()
   flags['hide-recording']=true
-  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH PROCESSING${esc_reset-}"
-  logr info "recordings directory: $1"
+  echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH PROCESSING${esc_reset-}" >&2
+  logr info "recordings directory: $1" >&2
 
   for opt in "${!opts[@]}"; do
     args+=("--$opt=${opts[$opt]}")
@@ -334,9 +334,9 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
     [ "${exit_code:-0}" -eq 0 ] || failed=$((failed + 1))
   done
 
-  [ "$failed" -lt $# ] || logr fail --name "BATCH PROCESSING"
-  [ "$failed" -eq 0 ] || logr warn --name "BATCH PROCESSING" "COMPLETED WITH ERRORS" || exit $?
-  logr success --name "BATCH PROCESSING" "COMPLETED"
+  [ "$failed" -lt $# ] || logr fail --name "BATCH PROCESSING" >&2
+  [ "$failed" -eq 0 ] || logr warn --name "BATCH PROCESSING" "COMPLETED WITH ERRORS" || exit $? >&2
+  logr success --name "BATCH PROCESSING" "COMPLETED" >&2
   exit
 }
 
@@ -359,7 +359,7 @@ mkdir -p "${build_file%/*}"
   mkdir -p "${out_svg_file%/*}"
 }
 
-echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${real_rec_file#./}${esc_reset-}"
+echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${real_rec_file#./}${esc_reset-}" >&2
 declare exit_code_printing_block='
   # highlight non-0 exit code
   [ "$_status" -eq 0 ] || {
@@ -447,7 +447,7 @@ INSTRUMENTATION
     "$cast_file"
 ) || logr error "ERROR WHILE RECORDING"
 
-echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}"
+echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
 declare -a svg_term_args=()
 [ ! -e "$svg_file" ] || rm -- "$svg_file"
 [ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
@@ -463,13 +463,13 @@ svg-term \
   --padding-x 20 \
   --padding-y 20 \
   ${svg_term_args[@]+"${svg_term_args[@]}"} \
-  --window || logr error "ERROR WHILE CONVERTING"
+  --window >&2 || logr error "ERROR WHILE CONVERTING"
 
 [ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
 cp "$svg_file" "$svg_file.0" || logr fail -x "$svg_file"
 
 # post-process SVG
-echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${svg_file#./}.0${esc_reset-}"
+echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${svg_file#./}.0${esc_reset-}" >&2
 # replace deprecated xmlns:xlink by xlink, see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
 declare svg css=''
 svg=$(
@@ -482,7 +482,7 @@ svg=$(
 )
 
 # highlight links
-echo " ${esc_yellow-}◕${esc_reset-} LINKING: ${esc_bold-}${svg_file#./}.1${esc_reset-}"
+echo " ${esc_yellow-}◕${esc_reset-} LINKING: ${esc_bold-}${svg_file#./}.1${esc_reset-}" >&2
 svg=$(
   title='Displayed as link in supporting terminal emulators'
   optional='\{0\,1\}'
@@ -500,7 +500,7 @@ svg=$(
 cp "$svg_file.1" "$svg_file.2"
 
 # highlight inserted line feeds
-echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${svg_file#./}.2${esc_reset-}"
+echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${svg_file#./}.2${esc_reset-}" >&2
 svg=$(
   LC_ALL=C sed 's,<path[^>]*>\(<text[^>]*>\)␊<,\1<tspan class="inserted-lf">⮐</tspan><,g' \
     "$svg_file.2" \
@@ -536,4 +536,5 @@ printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
 [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']}" = false ] || rm -- "$svg_file"
 [ "${flags['delete-build']}" = false ] || rm -- "$recordable_file" "$cast_file"
-echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${svg_file#./}${esc_reset-}"
+echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
+[ -t 1 ] || echo "${out_svg_file#./}"

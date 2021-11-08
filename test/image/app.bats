@@ -2,8 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
-  # TODO correct version
-  load helpers/setup.sh "${BUILD_TAG:?unspecified image to test}"
+  load helpers/setup.sh
   load ../helpers/svg.sh
 }
 
@@ -98,8 +97,8 @@ teardown() {
   mkdir -p rec/bar && copy_fixture .itermcolors . && copy_fixture test.rec rec/foo.rec && copy_fixture test.rec rec/bar/baz.rec
   image -i -e NODE_OPTIONS="--max-old-space-size=16384" "$BUILD_TAG"
 
-  assert_equal_svg_fixture "test.svg" "docs/foo.svg"
-  assert_equal_svg_fixture "test.svg" "docs/bar/baz.svg"
+  assert_equal_svg_fixture test.svg docs/foo.svg
+  assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_line " ℹ terminal profile search directory: rec"
   assert_line "●◕ BATCH PROCESSING"
   assert_line " ℹ recordings directory: rec"
@@ -113,7 +112,16 @@ teardown() {
   assert_line " ◕ LINKING: build/rec/bar/baz.svg.1"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
   assert_line " ● ANNOTATING: build/rec/bar/baz.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
-  assert_line " ● COMPLETED: build/rec/bar/baz.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
+  assert_line " ● COMPLETED: docs/bar/baz.svg"
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
+}
+
+@test "should output only completed files on missing terminal" {
+  mkdir -p rec/bar && copy_fixture test.rec rec/foo.rec && copy_fixture test.rec rec/bar/baz.rec
+  image "$BUILD_TAG"
+  assert_success
+  assert_equal_svg_fixture test.svg docs/foo.svg
+  assert_equal_svg_fixture test.svg docs/bar/baz.svg
+  assert_output --regexp 'docs/.*.svg'$'\n''docs/.*.svg'
 }

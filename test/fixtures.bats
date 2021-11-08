@@ -44,7 +44,7 @@ recording() {
 @test "should have working recording-hello-world.rec" {
   run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-hello-world.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
-  assert_output --partial " ● COMPLETED: build/rec/hello-world.svg"
+  assert_output --partial " ● COMPLETED: docs/hello-world.svg"
 }
 
 @test "should have working demo.rec" {
@@ -58,15 +58,14 @@ recording() {
 @test "should have working recordr.rec" {
   run bash -c "cd '$BATS_CWD' && bash '$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
-  assert_output "\
- ℹ terminal profile search directory: rec
- ✔ find_term_profile: terminal profile: rec/.itermcolors
- ● RECORDING: rec/demo.rec
- ◔ CONVERTING: build/rec/demo.cast
- ◑ PATCHING: build/rec/demo.svg.0
- ◕ LINKING: build/rec/demo.svg.1
- ● ANNOTATING: build/rec/demo.svg.2
- ● COMPLETED: build/rec/demo.svg"
+  assert_output --partial ' ℹ terminal profile search directory: rec'
+  assert_output --partial ' ✔ find_term_profile: terminal profile: rec/.itermcolors'
+  assert_output --partial ' ● RECORDING: rec/demo.rec'
+  assert_output --partial ' ◔ CONVERTING: build/rec/demo.cast'
+  assert_output --partial ' ◑ PATCHING: build/rec/demo.svg.0'
+  assert_output --partial ' ◕ LINKING: build/rec/demo.svg.1'
+  assert_output --partial ' ● ANNOTATING: build/rec/demo.svg.2'
+  assert_output --partial ' ● COMPLETED: docs/demo.svg'
 }
 
 @test "should have working logr.rec" {

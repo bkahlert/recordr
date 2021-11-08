@@ -33,9 +33,17 @@ setup() {
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/bar/baz.svg.2"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
-  assert_line " ● COMPLETED: build/rec/bar/baz.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
+  assert_line " ● COMPLETED: docs/bar/baz.svg"
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
+}
+
+@test "should output only completed files on missing terminal" {
+  run bash -c "echo \"\$('$(mocked_recordr)' 2>/dev/null)\""
+  assert_success
+  assert_equal_svg_fixture test.svg docs/foo.svg
+  assert_equal_svg_fixture test.svg docs/bar/baz.svg
+  assert_output --regexp 'docs/.*.svg'$'\n''docs/.*.svg'
 }
 
 @test "should record all rec files in specified recordings directory" {
@@ -55,8 +63,8 @@ setup() {
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/bar/baz.svg.2"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
-  assert_line " ● COMPLETED: build/rec/bar/baz.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
+  assert_line " ● COMPLETED: docs/bar/baz.svg"
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
 }
 
@@ -77,8 +85,8 @@ setup() {
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/bar/baz.svg.2"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
-  assert_line " ● COMPLETED: build/rec/bar/baz.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
+  assert_line " ● COMPLETED: docs/bar/baz.svg"
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
 }
 
@@ -99,8 +107,8 @@ setup() {
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/bar/baz.svg.2"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
-  assert_line " ● COMPLETED: build/rec/bar/baz.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
+  assert_line " ● COMPLETED: docs/bar/baz.svg"
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
 }
 
@@ -113,7 +121,7 @@ setup() {
   assert_line " ◑ PATCHING: build/rec/foo.svg.0"
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
 }
 
 @test "should skip invalid files" {
@@ -128,7 +136,7 @@ setup() {
   assert_line " ◑ PATCHING: build/rec/foo.svg.0"
   assert_line " ◕ LINKING: build/rec/foo.svg.1"
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.svg"
+  assert_line " ● COMPLETED: docs/foo.svg"
   assert_line " ! BATCH PROCESSING: COMPLETED WITH ERRORS"
 }
 
@@ -146,7 +154,7 @@ setup() {
   assert_line " ◑ PATCHING: build/rec/foo.patched.svg.0"
   assert_line " ◕ LINKING: build/rec/foo.patched.svg.1"
   assert_line " ● ANNOTATING: build/rec/foo.patched.svg.2"
-  assert_line " ● COMPLETED: build/rec/foo.patched.svg"
+  assert_line " ● COMPLETED: docs/foo.patched.svg"
 }
 
 @test "should use specified build-dir" {
