@@ -88,8 +88,8 @@ declare -A opts=(
 )
 [ ! "${TESTING-}" ] || opts['restart-delay']=1
 declare -A flags=(
-  ['hide-recording']=''    # whether to hide the recording process
-  ['delete-build']=''      # whether to delete intermediary build files on completion
+  ['hide-recording']='' # whether to hide the recording process
+  ['delete-build']=''   # whether to delete intermediary build files on completion
 )
 
 declare raw=("$@") args=() usage='[OPTIONS] [DIR[/ ]FILE [FILE...]]'
@@ -283,8 +283,8 @@ logr::diag() {
     printf '    --%s=%q\n' "$flag" "${flags[$flag]}"
   done
   echo "  args:"
-  for (( arg = 1; arg <= $#; arg++ )); do
-    printf '    %2d=%q\n' "$arg" "${@:$arg:1}"
+  for ((arg = 1; arg <= $#; arg++)); do
+    printf '    %2d=%q\n' "$arg" "${@:arg:1}"
   done
 }
 
@@ -567,6 +567,9 @@ printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
 [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
 [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']:-false}" = false ] || rm -- "$svg_file" "$svg_file".*
 [ "${flags['delete-build']:-false}" = false ] || rm -- "$recordable_file" "$cast_file"
+
+# always print nice output to STDERR
 echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
 
-[ -t 2 ] || echo "${out_svg_file#./}"
+# print completed file path to STDOUT if any output is redirected
+{ [ -t 1 ] && [ -t 2 ]; } || echo "${out_svg_file#./}"

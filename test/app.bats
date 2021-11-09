@@ -38,8 +38,11 @@ setup() {
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
 }
 
-@test "should output only completed files on missing terminal" {
+@test "should output completed files separately on redirected output" {
   run bash -c "echo \"\$('$(mocked_recordr)' 2>/dev/null)\""
+
+  TESTING=1 ./recordr rec hello-world.rec 2>/dev/null
+
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
