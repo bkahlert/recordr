@@ -1,0 +1,162 @@
+name: 'Convert terminal sessions to SVG'
+author: 'Björn Kahlert'
+description: 'Record ● rec files as terminal sessions and convert them to SVG'
+branding:
+  icon: 'circle'
+  color: 'red'
+inputs:
+  repository:
+    description: 'Repository name with owner. For example, bkahlert/recordr'
+    required: true
+    default: ${{ github.repository }}
+  ref:
+    description: >
+      The branch, tag or SHA to checkout. When checking out the repository that
+      triggered a workflow, this defaults to the reference or SHA for that
+      event. Otherwise, uses the default branch.
+    required: true
+  token:
+    description: >
+      Personal access token (PAT) used to fetch the repository. The PAT is configured
+      with the local git config, which enables your scripts to run authenticated git
+      commands. The post-job step removes the PAT.
+      We recommend using a service account with the least permissions necessary.
+      Also when generating a new PAT, select the least scopes necessary.
+      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    required: true
+    default: ${{ github.token }}
+  ssh-key:
+    description: >
+      SSH key used to fetch the repository. The SSH key is configured with the local
+      git config, which enables your scripts to run authenticated git commands.
+      The post-job step removes the SSH key.
+      We recommend using a service account with the least permissions necessary.
+      [Learn more about creating and using
+      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    required: false
+  ssh-known-hosts:
+    description: >
+      Known hosts in addition to the user and global host key database. The public
+      SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
+      `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
+    required: false
+  ssh-strict:
+    description: >
+      Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
+      and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
+      configure additional hosts.
+    required: true
+    default: true
+  persist-credentials:
+    description: 'Whether to configure the token or SSH key with the local git config'
+    required: true
+    default: true
+  build-dir:
+    description: 'Relative path under $GITHUB_WORKSPACE to store (intermediate) build artifacts'
+    required: false
+    default: build/rec/
+  out-dir:
+    description: 'Relative path under $GITHUB_WORKSPACE to copy the created SVG files to'
+    required: false
+    default: docs/
+  term:
+    description: 'Value to use for the TERM environmental variable'
+    required: false
+    default: xterm-256color
+  indicator:
+    description: 'Name of the environmental variable set during recording'
+    required: false
+    default: RECORDING
+  columns:
+    description: 'Number of columns to use for recording and conversion'
+    required: false
+    default: '132'
+  rows:
+    description: 'Number of rows to use for recording and conversion'
+    required: false
+    default: '25'
+  restart-delay:
+    description: 'Number of seconds until the animation restart'
+    required: false
+    default: '5'
+  term-profile:
+    description: 'Relative path under $GITHUB_WORKSPACE to to the terminal profile to use for conversion; [supported profiles](https://github.com/marionebl/term-schemesupported-formats)'
+    required: false
+    default: auto
+  parallel:
+    description: 'Maximum number of conversions that run at once; 0 will run as many conversions as possible'
+    required: false
+  delete-build:
+    description: 'Flag that if specified will keep delete intermediary build files on completion'
+    required: false
+    default: 'false'
+  hide-recording:
+    description: 'Flag that if specified will not show the recording process (default during batch mode)'
+    required: false
+    default: 'false'
+  files:
+    description: >
+      Relative paths under $GITHUB_WORKSPACE the rec files to be converted are located.
+      - To convert a single file, specify the file's path (e.g. `rec/foo.rec`).
+      - To convert a file tree, specify the directory's path (e.g. `rec`).
+        - To convert filter certain files, specify the directory's path (e.g. `rec`) and
+          on separate lines the relative paths of the files to convert (e.g. `foo.rec`).
+    required: false
+    default: rec/
+outputs:
+  status:
+    description: 'Exit status/code of the conversion'
+    value: ${{ steps.recordr.outputs.status }}
+  files:
+    description: 'List of the created SVG files'
+    value: ${{ steps.recordr.outputs.files }}
+runs:
+  using: 'composite'
+  steps:
+#    - name: Prepare
+#      id: prep
+#      run: |
+#        echo ::set-output name=build_tag::test
+#      shell: bash
+#
+#    - name: Build test
+#      uses: docker/bake-action@v1
+#      with:
+#        targets: image-local
+#      env:
+#        DEFAULT_TAG: ${{ steps.prep.outputs.build_tag }}
+#
+    - name: Convert terminal sessions to SVG
+      id: recordr
+      env:
+        RECORDR_IMAGE_TAG: edge
+      run: |
+        ./recordrw \
+          --build-dir=${{ inputs.build-dir }} \
+          --out-dir=${{ inputs.out-dir }} \
+          --term=${{ inputs.term }} \
+          --indicator=${{ inputs.indicator }} \
+          --columns=${{ inputs.columns }} \
+          --rows=${{ inputs.rows }} \
+          --restart-delay=${{ inputs.restart-delay }} \
+          --term-profile=${{ inputs.term-profile }} \
+          --parallel=${{ inputs.parallel }} \
+          --delete-build=${{ inputs.delete-build }} \
+          --hide-recording=${{ inputs.hide-recording }} \
+          ${{ inputs.files }}
+        echo ::set-output name=status::$?
+        echo ::set-output name=files::test
+      shell: bash
+#  args:
+#    - --build-dir=${{ inputs.build-dir }}
+#    - --out-dir=${{ inputs.out-dir }}
+#    - --term=${{ inputs.term }}
+#    - --indicator=${{ inputs.indicator }}
+#    - --columns=${{ inputs.columns }}
+#    - --rows=${{ inputs.rows }}
+#    - --restart-delay=${{ inputs.restart-delay }}
+#    - --term-profile=${{ inputs.term-profile }}
+#    - --parallel=${{ inputs.parallel }}
+#    - --delete-build=${{ inputs.delete-build }}
+#    - --hide-recording=${{ inputs.hide-recording }}
+#    - ${{ inputs.files }}

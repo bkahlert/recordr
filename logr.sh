@@ -71,7 +71,11 @@ printf -v ESC_PATTERN '%s' "${ESC_PATTERNS[@]}"
 # bashsupport disable=BP2001
 # Prints the escape sequences of the requested capabilities to STDERR.
 # Arguments:
-#   init - initializes internal structures
+#   init - initializes ANSI output if
+#          - terminal is connected on STDERR,
+#          - TERM is not dumb,
+#          - NO_COLOR has no value, and
+#          - [APP]_NO_COLOR (e.g. `FOO_NO_COLOR`) has no value
 #   v - same behavior as `printf -v`
 #   * - capabilities
 esc() {
@@ -80,9 +84,10 @@ esc() {
     case $1 in
       --init)
         shift
-        # escape sequences if terminal is connected
+        local no_color=${NO_COLOR-} app=${0##*/} && app_no_color="${app^^}_NO_COLOR"
+        [ ! -v "$app_no_color" ] || [ "${!app_no_color:-false}" = false ] || no_color=1
         # shellcheck disable=SC2015,SC2034
-        [ -t 2 ] && [ ! "${TERM-}" = dumb ] && {
+        [ ! -t 2 ] || [ "${TERM-}" = dumb ] || [ "${no_color-}" ] || {
           # updates COLUMNS and LINES and calls optional callback with these dimensions
           tty_change_handler() {
             COLUMNS=$({ tput cols || tput co; }) && LINES=$({ tput lines || tput li; })
@@ -1136,7 +1141,7 @@ main() {
   require_shopt globstar            # ** matches all files and any number of dirs and sub dirs
   stty -echoctl 2>/dev/null || true # don't echo control characters in hat notation (e.g. `^C`)
 
-  logr _init
+  [ "${TESTING-}" ] || logr _init
 
   [ ! "${RECORDING-}" ] || return "$EX_OK"
   [[ " $* " == *" -!- "* ]] || return "$EX_OK"

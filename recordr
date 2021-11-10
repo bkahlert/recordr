@@ -372,9 +372,8 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 }
 
 # one arg left = relative path to rec file
-declare rec_file=${2#./}                                         # e.g. foo.bar
-declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.bar
-[ -f "$real_rec_file" ] || real_rec_file=${real_rec_file%.*}.rec # e.g. rec/foo.rec
+declare rec_file=${2#./}                                         # e.g. foo.rec
+declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.rec
 [ -e "$real_rec_file" ] || logr error --name "NOT FOUND" --code "$EX_USAGE" "$real_rec_file"
 [ -r "$real_rec_file" ] || logr error --name "NOT READABLE" --code "$EX_NOINPUT" "$real_rec_file"
 
@@ -476,7 +475,7 @@ INSTRUMENTATION
     --command "bash '$recordable_file'" \
     --quiet \
     "$cast_file" >&2
-) || logr error "ERROR WHILE RECORDING $BASHPID $$ $?"
+) || logr error --name "RECORDING" "asciinema did exit $? while recording $recordable_file"
 
 echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
 declare -a svg_term_args=()
@@ -487,14 +486,15 @@ declare -a svg_term_args=()
   "--term" "${supported_profiles["${opts['term-profile']##*.}"]}"
   "--profile" "$(cd "${opts['term-profile']%/*}" && pwd)/${opts['term-profile']##*/}"
 )
-
-svg-term \
-  --in "$cast_file" \
-  --out "$svg_file" \
-  --padding-x 20 \
-  --padding-y 20 \
-  ${svg_term_args[@]+"${svg_term_args[@]}"} \
-  --window >&2 || logr error "ERROR WHILE CONVERTING"
+(
+  LC_ALL=C svg-term \
+    --in "$cast_file" \
+    --out "$svg_file" \
+    --padding-x 20 \
+    --padding-y 20 \
+    ${svg_term_args[@]+"${svg_term_args[@]}"} \
+    --window >&2
+) || logr error --name "CONVERTING" "svg-term did exit $? while recording $cast_file"
 
 [ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
 cp "$svg_file" "$svg_file.0" || logr fail -x "$svg_file"

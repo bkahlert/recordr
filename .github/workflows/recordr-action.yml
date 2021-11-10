@@ -1,0 +1,18 @@
+on: [push,workflow_dispatch]
+
+jobs:
+  custom_test:
+    runs-on: ubuntu-latest
+    name: Run GitHub actions test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Convert terminal sessions to SVG
+        id: recordr
+        uses: ./
+        with:
+          files: rec/hello-world.rec
+#      - name: Get the pokemon
+#        run: echo "${{ steps.recordr.outputs.files }} attack"

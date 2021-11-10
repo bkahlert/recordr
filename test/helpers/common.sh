@@ -551,6 +551,21 @@ expect() { # [!|=N] [--keep-empty-lines] [--output merged|separate|stderr|stdout
   run "$@" "$(make_interpretable '#!/usr/bin/expect' -)"
 }
 
+run_tty() {
+  local script command
+  printf -v command " %s" "$@"
+  opts='-no''echo'
+  script=$(
+    mkfile +x '#!/usr/bin/expect' - <<EXPECT
+set timeout -1
+spawn $opts$command
+expect "$ "
+EXPECT
+  )
+  run "$script"
+}
+
+
 # Tests if this test run was invoked via BashSupport Pro.
 # Globals:
 #   BASH_SOURCE

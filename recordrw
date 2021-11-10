@@ -25,7 +25,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-docker run --tty --rm --name "recordr-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)" \
+RECORDR_IMAGE=${RECORDR_IMAGE:-bkahlert/recordr:${RECORDR_IMAGE_TAG:-latest}}
+
+declare -a opts=()
+[ ! -t 0 ] || opts+=("--interactive")
+[ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
+opts+=("--rm")
+opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)")
+
+docker run "${opts[@]}" \
   -e DEBUG=0 \
   -e TZ="$(date +"%Z")" \
   -e PUID="$(id -u)" \
@@ -35,4 +43,4 @@ docker run --tty --rm --name "recordr-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -d
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD":"$PWD" \
   -w "$PWD" \
-  bkahlert/recordr:latest "$@"
+  "$RECORDR_IMAGE" "$@"
