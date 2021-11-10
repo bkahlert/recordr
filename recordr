@@ -372,9 +372,8 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 }
 
 # one arg left = relative path to rec file
-declare rec_file=${2#./}                                         # e.g. foo.bar
-declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.bar
-[ -f "$real_rec_file" ] || real_rec_file=${real_rec_file%.*}.rec # e.g. rec/foo.rec
+declare rec_file=${2#./}                                         # e.g. foo.rec
+declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.rec
 [ -e "$real_rec_file" ] || logr error --name "NOT FOUND" --code "$EX_USAGE" "$real_rec_file"
 [ -r "$real_rec_file" ] || logr error --name "NOT READABLE" --code "$EX_NOINPUT" "$real_rec_file"
 
