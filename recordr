@@ -476,7 +476,7 @@ INSTRUMENTATION
     --command "bash '$recordable_file'" \
     --quiet \
     "$cast_file" >&2
-) || logr error "ERROR WHILE RECORDING $BASHPID $$ $?"
+) || logr error --name "RECORDING" "asciinema did exit $? while recording $recordable_file"
 
 echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
 declare -a svg_term_args=()
@@ -487,14 +487,15 @@ declare -a svg_term_args=()
   "--term" "${supported_profiles["${opts['term-profile']##*.}"]}"
   "--profile" "$(cd "${opts['term-profile']%/*}" && pwd)/${opts['term-profile']##*/}"
 )
-
-svg-term \
-  --in "$cast_file" \
-  --out "$svg_file" \
-  --padding-x 20 \
-  --padding-y 20 \
-  ${svg_term_args[@]+"${svg_term_args[@]}"} \
-  --window >&2 || logr error "ERROR WHILE CONVERTING"
+(
+  LC_ALL=C svg-term \
+    --in "$cast_file" \
+    --out "$svg_file" \
+    --padding-x 20 \
+    --padding-y 20 \
+    ${svg_term_args[@]+"${svg_term_args[@]}"} \
+    --window >&2
+) || logr error --name "CONVERTING" "svg-term did exit $? while recording $cast_file"
 
 [ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
 cp "$svg_file" "$svg_file.0" || logr fail -x "$svg_file"

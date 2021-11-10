@@ -38,11 +38,16 @@ setup() {
   assert_line " ✔ BATCH PROCESSING: COMPLETED"
 }
 
-@test "should output completed files separately on redirected output" {
-  run bash -c "echo \"\$('$(mocked_recordr)' 2>/dev/null)\""
+@test "should output completed files separately on redirected STDOUT" {
+  run bash -c "echo \"\$('$(mocked_recordr)')\""
+  assert_success
+  assert_equal_svg_fixture test.svg docs/foo.svg
+  assert_equal_svg_fixture test.svg docs/bar/baz.svg
+  assert_output --regexp 'docs/.*.svg'$'\n''docs/.*.svg'
+}
 
-  TESTING=1 ./recordr rec hello-world.rec 2>/dev/null
-
+@test "should output completed files separately on redirected STDERR" {
+  run bash -c "'$(mocked_recordr)' 2>/dev/null"
   assert_success
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
@@ -128,7 +133,7 @@ setup() {
 }
 
 @test "should skip invalid files" {
-  run bash "$(delayed_recordr)" rec/foo.rec rec/bar/baz.rec
+  run bash "$(mocked_recordr --asciinema:"sleep 1")" rec/foo.rec rec/bar/baz.rec
   assert_failure
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_line "●◕ BATCH PROCESSING"
@@ -141,6 +146,18 @@ setup() {
   assert_line " ● ANNOTATING: build/rec/foo.svg.2"
   assert_line " ● COMPLETED: docs/foo.svg"
   assert_line " ! BATCH PROCESSING: COMPLETED WITH ERRORS"
+}
+
+@test "should log asciinema errors" {
+  run bash "$(mocked_recordr --asciinema:"exit 42")" rec/foo.rec
+  assert_failure
+  assert_line " ✘ RECORDING: asciinema did exit 42 while recording build/rec/foo.sh"
+}
+
+@test "should log svg-term errors" {
+  run bash "$(mocked_recordr --svg-term:"exit 42")" rec/foo.rec
+  assert_failure
+  assert_line " ✘ CONVERTING: svg-term did exit 42 while recording build/rec/foo.cast"
 }
 
 @test "should record rec using interpreter" {
@@ -259,7 +276,7 @@ setup() {
 }
 
 @test "should record in parallel by default" {
-  run bash "$(delayed_recordr)" --build-dir . rec/foo.rec bar/baz.rec
+  run bash "$(mocked_recordr --asciinema:"sleep 1")" --build-dir . rec/foo.rec bar/baz.rec
   output=${output//test2/test}
   assert_output --regexp " ● RECORDING: rec\/(foo|bar\/baz).rec
  ● RECORDING: rec\/(foo|bar\/baz).rec"

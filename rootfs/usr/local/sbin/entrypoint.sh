@@ -209,7 +209,6 @@ main() {
   # ... and only print it to standard error if DEBUG=1 (errors will always be printed)
   [ "${DEBUG-0}" = "0" ] || exec 3>&2
   {
-    [ ! "${PUID-}" ] || logr task "updating ID of user $app_user to $PUID" -- update_user_id "$app_user" "$PUID"
     [ ! "${TZ-}" ] || logr task "updating timezone to $TZ" -- update_timezone "$TZ"
     [ ! "${PGID-}" ] || logr task "updating ID of group $app_group to $PGID" -- update_group_id "$app_group" "$PGID"
     [ ! "${PUID-}" ] || logr task "updating ID of user $app_user to $PUID" -- update_user_id "$app_user" "$PUID" || logr fail "failed to update ID of user $app_user to $PUID"
@@ -222,7 +221,7 @@ main() {
   } >&3
   exec 3>&-
 
-  yasu "$app_user:$app_group" entrypoint_user.sh "$@"
+  exec yasu "$app_user:$app_group" entrypoint_user.sh "$@"
 }
 
 main "$@"
