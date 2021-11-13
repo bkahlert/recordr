@@ -10,7 +10,7 @@ setup() {
   load helpers/svg.sh
 
   cd "$BATS_TEST_TMPDIR" || exit
-  cp "${BATS_CWD}/logr.sh" .
+  cp "$BATS_CWD/logr.sh" .
   mkdir -p rec/bar
   copy_fixture test.rec rec/foo.rec
   copy_fixture test.rec rec/bar/baz.rec

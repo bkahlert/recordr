@@ -27,23 +27,24 @@
 
 declare -a opts=()
 opts+=("-e" "NODE_OPTIONS='--max-old-space-size=16384'")
+opts+=("-e" "TESTING='${TESTING-}'")
+opts+=("-e" "RECORDING='${RECORDING-}'")
+opts+=("-e" "TERM='${TERM-}'")
+
 # Adds the given arguments to the opts array
 opts() { eval 'opts+=("$@")'; }
 [ ! -t 0 ] || opts+=("--interactive")
 [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
 [ ! -v DOCKER_ARGS ] || eval opts "$DOCKER_ARGS"
 opts+=("--rm")
-opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)")
+opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
 opts+=("${DOCKER_IMAGE:-bkahlert/recordr:${DOCKER_IMAGE_TAG:-latest}}")
 
 docker run \
-  -e DEBUG="${DEBUG-0}" \
-  -e TESTING="${TESTING-0}" \
-  -e RECORDING="${RECORDING-0}" \
+  -e DEBUG="${DEBUG-}" \
   -e TZ="$(date +"%Z")" \
   -e PUID="$(id -u)" \
   -e PGID="$(id -g)" \
-  -e TERM="$TERM" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD":"$PWD" \
   -w "$PWD" \

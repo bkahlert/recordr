@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Print updated SVG files
+      - name: Prepare
+        id: prep
         run: |
-          echo "${{ env.GITHUB_WORKFLOW }}(docs): update"
+          echo ::set-output name=recordr_branch::"${{ github.ref_name }}--docs"
 
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Convert terminal sessions to SVG
+      - name: ● REC
         id: recordr
         uses: ./
         with:
-          files: rec/hello-world.rec
+          branch: ${{ steps.prep.outputs.recordr_branch }}
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
@@ -35,6 +35,6 @@ jobs:
             ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
           body: |
             Updates ${{ steps.recordr.outputs.file-list }}
-            based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
+            ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
-          branch: ${{ github.ref_name }}--docs
+          branch: ${{ steps.prep.outputs.recordr_branch }}

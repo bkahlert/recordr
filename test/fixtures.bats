@@ -55,16 +55,12 @@ recording() {
   assert_line "The moment it hits 0 the animation plays again."
 }
 
-@test "should have working recordr.rec" {
-  run bash -c "cd '$BATS_CWD' && bash '$(recording "recordr.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
+@test "should have working recording-demo.rec" {
+  run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-demo.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
   assert_output --partial ' ℹ terminal profile search directory: rec'
   assert_output --partial ' ✔ find_term_profile: terminal profile: rec/.itermcolors'
   assert_output --partial ' ● RECORDING: rec/demo.rec'
-  assert_output --partial ' ◔ CONVERTING: build/rec/demo.cast'
-  assert_output --partial ' ◑ PATCHING: build/rec/demo.svg.0'
-  assert_output --partial ' ◕ LINKING: build/rec/demo.svg.1'
-  assert_output --partial ' ● ANNOTATING: build/rec/demo.svg.2'
   assert_output --partial ' ● COMPLETED: docs/demo.svg'
 }
 

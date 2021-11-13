@@ -252,7 +252,7 @@ bats() {
   )
 
   echo "$(tput setaf 7) ℹ$(tput sgr0) bats command line: bats" "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}"
-  docker run --rm --name "bats-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)" \
+  docker run --rm --name "bats-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
     -e TERM="${TERM-}" \
     -e TMPDIR="${PWD:?}/${BATS_TMPDIR%${PWD}}" \
     -v /var/run/docker.sock:/var/run/docker.sock \
