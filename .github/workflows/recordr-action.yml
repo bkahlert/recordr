@@ -1,9 +1,14 @@
+name: docs
+
 on: [push,workflow_dispatch]
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  custom_test:
+  docs:
     runs-on: ubuntu-latest
-    name: Run GitHub actions test
 
     steps:
       - name: Checkout
@@ -13,6 +18,27 @@ jobs:
         id: recordr
         uses: ./
         with:
-          files: rec/hello-world.rec
-#      - name: Get the pokemon
-#        run: echo "${{ steps.recordr.outputs.files }} attack"
+          separator: ','
+          files: |
+            rec
+            hello-world.rec
+            logr.rec
+
+      - name: Print updated SVG files
+        run: echo "${{ steps.recordr.outputs.files }}"
+
+      - name: Print updated SVG files 2
+        run: echo "${{ steps.recordr.outputs.file-list }}"
+
+#      - name: Create pull request
+#        uses: peter-evans/create-pull-request@v3
+#        if: startsWith(github.ref, 'refs/heads/')
+#        with:
+#          path: docs
+#          commit-message: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
+#          title: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
+#          body: |
+#            Updates ${{ steps.recordr.outputs.file-list }}
+#            based on re-recorded terminal sessions ${{ steps.recordr.inputs.files }}
+#          labels: recordr docs rec
+#          branch: "${{ github.ref }}/docs"

@@ -151,13 +151,13 @@ setup() {
 @test "should log asciinema errors" {
   run bash "$(mocked_recordr --asciinema:"exit 42")" rec/foo.rec
   assert_failure
-  assert_line " ✘ RECORDING: asciinema did exit 42 while recording build/rec/foo.sh"
+  assert_line " ✘ RECORDING: asciinema did exit 42 while recording build/rec/foo.sh to build/rec/foo.cast"
 }
 
 @test "should log svg-term errors" {
   run bash "$(mocked_recordr --svg-term:"exit 42")" rec/foo.rec
   assert_failure
-  assert_line " ✘ CONVERTING: svg-term did exit 42 while recording build/rec/foo.cast"
+  assert_line " ✘ CONVERTING: svg-term did exit 42 while converting build/rec/foo.cast to build/rec/foo.svg.0"
 }
 
 @test "should record rec using interpreter" {

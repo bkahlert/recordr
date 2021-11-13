@@ -86,12 +86,13 @@ inputs:
   parallel:
     description: 'Maximum number of conversions that run at once; 0 will run as many conversions as possible'
     required: false
+    default: auto
   delete-build:
-    description: 'Flag that if specified will keep delete intermediary build files on completion'
+    description: 'Whether to hide the recording process'
     required: false
     default: 'false'
   hide-recording:
-    description: 'Flag that if specified will not show the recording process (default during batch mode)'
+    description: 'Whether to delete intermediary build files on completion'
     required: false
     default: 'false'
   files:
@@ -103,60 +104,60 @@ inputs:
           on separate lines the relative paths of the files to convert (e.g. `foo.rec`).
     required: false
     default: rec/
+  separator:
+    description: 'Separator to use for `output.files`'
+    required: false
+    default: ', '
 outputs:
   status:
     description: 'Exit status/code of the conversion'
     value: ${{ steps.recordr.outputs.status }}
   files:
-    description: 'List of the created SVG files'
+    description: 'Newline-separated list of the created SVG files'
     value: ${{ steps.recordr.outputs.files }}
+  file-list:
+    description: '`inputs.separator`-separated list of the created SVG files'
+    value: ${{ steps.recordr.outputs.file-list }}
 runs:
   using: 'composite'
   steps:
-#    - name: Prepare
-#      id: prep
-#      run: |
-#        echo ::set-output name=build_tag::test
-#      shell: bash
-#
-#    - name: Build test
-#      uses: docker/bake-action@v1
-#      with:
-#        targets: image-local
-#      env:
-#        DEFAULT_TAG: ${{ steps.prep.outputs.build_tag }}
-#
     - name: Convert terminal sessions to SVG
       id: recordr
       env:
-        RECORDR_IMAGE_TAG: edge
+        DOCKER_IMAGE_TAG: edge
       run: |
-        ./recordrw \
-          --build-dir=${{ inputs.build-dir }} \
-          --out-dir=${{ inputs.out-dir }} \
-          --term=${{ inputs.term }} \
-          --indicator=${{ inputs.indicator }} \
-          --columns=${{ inputs.columns }} \
-          --rows=${{ inputs.rows }} \
-          --restart-delay=${{ inputs.restart-delay }} \
-          --term-profile=${{ inputs.term-profile }} \
-          --parallel=${{ inputs.parallel }} \
-          --delete-build=${{ inputs.delete-build }} \
-          --hide-recording=${{ inputs.hide-recording }} \
-          ${{ inputs.files }}
-        echo ::set-output name=status::$?
-        echo ::set-output name=files::test
+        declare -a input_files=()
+        while read -r input_file; do
+          [ ! "${input_file-}" ] || input_files+=("$input_file")
+        done <<INPUT_FILES
+        ${{ inputs.files }}
+        INPUT_FILES
+
+        declare output_files
+        output_files=$(
+          ./recordrw \
+            --build-dir=${{ inputs.build-dir }} \
+            --out-dir=${{ inputs.out-dir }} \
+            --term=${{ inputs.term }} \
+            --indicator=${{ inputs.indicator }} \
+            --columns=${{ inputs.columns }} \
+            --rows=${{ inputs.rows }} \
+            --restart-delay=${{ inputs.restart-delay }} \
+            --term-profile=${{ inputs.term-profile }} \
+            --parallel=${{ inputs.parallel }} \
+            --delete-build=${{ inputs.delete-build }} \
+            --hide-recording=${{ inputs.hide-recording }} \
+            "${input_files[@]}"
+        )
+        echo ::set-output name=status::"$?"
+        echo ::set-output name=files::"${output_files-}"
+
+        declare output_file_list=''
+        while read -r output_file; do
+          [ "${output_file-}" ] || continue
+          [ ! "${output_file_list-}" ] || output_file_list+="${{ inputs.separator }}"
+          output_file_list+="$output_file"
+        done <<<"${output_files-}"
+
+        echo ::set-output name=file-list::"$output_file_list"
       shell: bash
-#  args:
-#    - --build-dir=${{ inputs.build-dir }}
-#    - --out-dir=${{ inputs.out-dir }}
-#    - --term=${{ inputs.term }}
-#    - --indicator=${{ inputs.indicator }}
-#    - --columns=${{ inputs.columns }}
-#    - --rows=${{ inputs.rows }}
-#    - --restart-delay=${{ inputs.restart-delay }}
-#    - --term-profile=${{ inputs.term-profile }}
-#    - --parallel=${{ inputs.parallel }}
-#    - --delete-build=${{ inputs.delete-build }}
-#    - --hide-recording=${{ inputs.hide-recording }}
-#    - ${{ inputs.files }}

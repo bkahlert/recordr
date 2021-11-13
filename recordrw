@@ -25,22 +25,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-RECORDR_IMAGE=${RECORDR_IMAGE:-bkahlert/recordr:${RECORDR_IMAGE_TAG:-latest}}
-
 declare -a opts=()
+opts+=("-e" "NODE_OPTIONS='--max-old-space-size=16384'")
+# Adds the given arguments to the opts array
+opts() { eval 'opts+=("$@")'; }
 [ ! -t 0 ] || opts+=("--interactive")
 [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
+[ ! -v DOCKER_ARGS ] || eval opts "$DOCKER_ARGS"
 opts+=("--rm")
 opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)")
+opts+=("${DOCKER_IMAGE:-bkahlert/recordr:${DOCKER_IMAGE_TAG:-latest}}")
 
-docker run "${opts[@]}" \
-  -e DEBUG=0 \
+docker run \
+  -e DEBUG="${DEBUG-0}" \
+  -e TESTING="${TESTING-0}" \
+  -e RECORDING="${RECORDING-0}" \
   -e TZ="$(date +"%Z")" \
   -e PUID="$(id -u)" \
   -e PGID="$(id -g)" \
-  -e NODE_OPTIONS="--max-old-space-size=16384" \
   -e TERM="$TERM" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD":"$PWD" \
   -w "$PWD" \
-  "$RECORDR_IMAGE" "$@"
+  "${opts[@]+"${opts[@]}"}" \
+  "$@"

@@ -207,7 +207,7 @@ main() {
   # redirect entrypoint standard output to FD3 = /dev/null
   exec 3>/dev/null
   # ... and only print it to standard error if DEBUG=1 (errors will always be printed)
-  [ "${DEBUG-0}" = "0" ] || exec 3>&2
+  [ "${DEBUG:-0}" = 0 ] || exec 3>&2
   {
     [ ! "${TZ-}" ] || logr task "updating timezone to $TZ" -- update_timezone "$TZ"
     [ ! "${PGID-}" ] || logr task "updating ID of group $app_group to $PGID" -- update_group_id "$app_group" "$PGID"
