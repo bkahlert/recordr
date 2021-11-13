@@ -30,11 +30,11 @@ jobs:
         if: startsWith(github.ref, 'refs/heads/')
         with:
           commit-message: |
-            ${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
           title: |
-            ${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
           body: |
             Updates ${{ steps.recordr.outputs.file-list }}
             based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
           labels: recordr,docs,rec
-          branch: ${{ github.ref }}/docs
+          branch: ${{ github.ref_name }}--docs
