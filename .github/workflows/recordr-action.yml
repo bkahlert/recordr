@@ -35,6 +35,6 @@ jobs:
             ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
           body: |
             Updates ${{ steps.recordr.outputs.file-list }}
-            based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
+            ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
           branch: ${{ github.ref_name }}--docs
