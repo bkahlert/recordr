@@ -18,27 +18,16 @@ jobs:
         id: recordr
         uses: ./
         with:
-          separator: ','
-          files: |
-            rec
-            hello-world.rec
-            logr.rec
+          files: rec/hello-world.rec
 
-      - name: Print updated SVG files
-        run: echo "${{ steps.recordr.outputs.files }}"
-
-      - name: Print updated SVG files 2
-        run: echo "${{ steps.recordr.outputs.file-list }}"
-
-#      - name: Create pull request
-#        uses: peter-evans/create-pull-request@v3
-#        if: startsWith(github.ref, 'refs/heads/')
-#        with:
-#          path: docs
-#          commit-message: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
-#          title: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
-#          body: |
-#            Updates ${{ steps.recordr.outputs.file-list }}
-#            based on re-recorded terminal sessions ${{ steps.recordr.inputs.files }}
-#          labels: recordr docs rec
-#          branch: "${{ github.ref }}/docs"
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v3
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          commit-message: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
+          title: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
+          body: |
+            Updates ${{ steps.recordr.outputs.file-list }}
+            based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
+          labels: recordr docs rec
+          branch: "${{ github.ref }}/docs"
