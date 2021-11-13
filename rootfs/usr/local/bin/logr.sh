@@ -672,7 +672,6 @@ logr() {
       # Unified signal handler run when shell receives signals earlier registered using handle.
       signal_handler() {
         local signal="$1" status="$2" command="$3" location="$4"
-        echo "kllk"
         logr cleanup
         case $signal in
         EXIT)

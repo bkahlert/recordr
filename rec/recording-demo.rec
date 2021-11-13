@@ -1,0 +1,3 @@
+#!/usr/bin/env recordr
+
+PATH=.:$PATH rec rec/demo.rec --build-dir="$TMPDIR"

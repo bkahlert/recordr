@@ -375,7 +375,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
     if [ ${#pids[@]} -gt 0 ]; then
       echo "Failed to terminate: ${pids[*]}"
       for pid in "${pids[@]}"; do
-        ! kill -0 "$pid" || kill -9 "-$pid" || echo "Failed to kill $pid"
+        ! kill -0 "$pid" || kill -9 "$pid" || echo "Failed to kill $pid"
       done
     fi
 
@@ -387,7 +387,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 
     trap - EXIT HUP INT QUIT PIPE
     trap 'exit' TERM
-    kill -TERM "-$$"
+    kill -TERM "$$"
   }
 
   trap cleanup EXIT HUP INT QUIT PIPE TERM
@@ -525,6 +525,7 @@ INSTRUMENTATION
 record() {
   local rec_file=${1?"rec file missing"} recordable_file=${2?recordable file missing} target=${3?"target missing"}
   echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${rec_file#./}${esc_reset-}" >&2
+  local err_file="${target%.*}.asciinema"
   rec_to_recordable "$rec_file" "$recordable_file"
 
   local -a asciinema_args=("rec")
@@ -533,16 +534,23 @@ record() {
   [ ! "${DEBUG:-0}" = 0 ] || asciinema_args+=("--quiet")
 
   [ ! -e "$target" ] || rm -- "$target"
+  asciinema_args+=("--overwrite")
   asciinema_args+=("$target")
 
   export TMPDIR
   (
     if [ "${flags['hide-recording']:-false}" = false ]; then
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"}
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file"
     else
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} &>/dev/null
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file" >/dev/null
     fi
-  ) || logr error --name "RECORDING" "asciinema did exit $? while recording $recordable_file to $target"
+  ) || {
+    local asciinema_status=$? name="RECORDING" err_message indent
+    printf -v indent '%*s' "$((${#name} +5))" ''
+    err_message=$(cat "$err_file")
+    err_message="$indent${err_message//$'\n'/$'\n'$indent}"
+    logr error --name "$name" "asciinema did exit $asciinema_status while recording $recordable_file to $target"$'\n'"$err_message"
+  }
 }
 
 # Converts the specified cast file to the specified SVG file.
