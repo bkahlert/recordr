@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Print updated SVG files
+        run: |
+          echo "${{ env.GITHUB_WORKFLOW }}(docs): update"
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -24,10 +29,12 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         if: startsWith(github.ref, 'refs/heads/')
         with:
-          commit-message: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
-          title: "${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}"
+          commit-message: |
+            ${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}
+          title: |
+            ${{ env.GITHUB_WORKFLOW }}(docs): update ${{ steps.recordr.outputs.file-list }}
           body: |
             Updates ${{ steps.recordr.outputs.file-list }}
             based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
-          labels: recordr docs rec
-          branch: "${{ github.ref }}/docs"
+          labels: recordr,docs,rec
+          branch: ${{ github.ref }}/docs
