@@ -25,6 +25,10 @@ jobs:
         with:
           files: rec/hello-world.rec
 
+#      - name: Print updated SVG files
+#        run: |
+#          echo "${{ steps.recordr.outputs.markdown }}"
+
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
         if: startsWith(github.ref, 'refs/heads/')
@@ -35,6 +39,6 @@ jobs:
             ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
           body: |
             Updates ${{ steps.recordr.outputs.file-list }}
-            based on re-recorded terminal sessions ${{ steps.recordr.outputs.files }}
+            ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
           branch: ${{ github.ref_name }}--docs
