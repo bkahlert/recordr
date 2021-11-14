@@ -24,6 +24,21 @@ teardown() {
 }
 
 actw() {
+  local wrapper_name=${FUNCNAME[0]}
+  local -a args=() wrapper_args=()
+  while (($#)); do
+    case $1 in
+      --${wrapper_name?}:*)
+        wrapper_args+=("${1#--${wrapper_name?}:}")
+        ;;
+      *)
+        args+=("$1")
+        ;;
+    esac
+    shift
+  done
+  set -- "${args[@]}"
+
   local -a opts=()
   opts+=("-e" "TESTING=${TESTING-}")
   opts+=("-e" "RECORDING=${RECORDING-}")
@@ -34,8 +49,9 @@ actw() {
   [ ! -t 0 ] || opts+=("--interactive")
   [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
   [ ! -v ACTW_ARGS ] || eval opts "$ACTW_ARGS"
+  opts+=("${wrapper_args[@]}")
   opts+=("--rm")
-  opts+=("--name" "${FUNCNAME[0]}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
+  opts+=("--name" "$wrapper_name--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
   opts+=("${ACTW_IMAGE:-efrecon/act:${ACTW_IMAGE_TAG:-v0.2.24}}")
 
   docker run \
@@ -51,7 +67,16 @@ actw() {
 }
 
 act() {
+  export RECORDRW_ARGS
+  RECORDRW_ARGS=$(
+    cat <<RECORDRW_ARGS
+-v "$PWD/recordr":/usr/local/bin/recordr \
+-v "$PWD/logr.sh":/usr/local/bin/logr.sh
+RECORDRW_ARGS
+  )
+
   actw \
+    --actw:--env --actw:RECORDRW_ARGS="$RECORDRW_ARGS" \
     --bind \
     --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
     "$@"
@@ -75,14 +100,6 @@ jobs:
         with:
           files: rec/hello-world.rec
 WORKFLOW
-
-  export RECORDRW_ARGS
-  RECORDRW_ARGS=$(
-    cat <<RECORDRW_ARGS
--v "$PWD/recordr":/usr/local/bin/recordr \
--v "$PWD/logr.sh":/usr/local/bin/logr.sh
-RECORDRW_ARGS
-  )
 
   run act -j test
   assert_output --partial '[test workflow/test]   ⚙  ::set-output:: status=0

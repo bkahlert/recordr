@@ -26,6 +26,22 @@
 # SOFTWARE.
 
 # Usage: curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+# Local: ./recordrw --recordrw:-v --recordrw:"$PWD/recordr":/usr/local/bin/recordr --recordrw:-v --recordrw:"$PWD/logr.sh":/usr/local/bin/logr.sh [OPTIONS] [DIR[/ ]FILE [FILE...]]
+
+declare wrapper_name=${0##*/}
+declare -a args=() wrapper_args=()
+while (($#)); do
+  case $1 in
+    --${wrapper_name?}:*)
+      wrapper_args+=("${1#--${wrapper_name?}:}")
+      ;;
+    *)
+      args+=("$1")
+      ;;
+  esac
+  shift
+done
+set -- "${args[@]}"
 
 declare -a opts=()
 opts+=("-e" "NODE_OPTIONS=--max-old-space-size=16384")
@@ -38,8 +54,9 @@ opts() { eval 'opts+=("$@")'; }
 [ ! -t 0 ] || opts+=("--interactive")
 [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
 [ ! -v RECORDRW_ARGS ] || eval opts "$RECORDRW_ARGS"
+opts+=("${wrapper_args[@]}")
 opts+=("--rm")
-opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
+opts+=("--name" "$wrapper_name--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
 opts+=("${RECORDRW_IMAGE:-bkahlert/recordr:${RECORDRW_IMAGE_TAG:-latest}}")
 
 docker run \
