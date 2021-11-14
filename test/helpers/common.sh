@@ -368,9 +368,9 @@ chmod_force() {
 unlock() {
   require_test
   if [ $# -eq 0 ]; then
-    chmod -R +rw "$BATS_TEST_TMPDIR"
+    chmod_force -R ugw+rw "$BATS_TEST_TMPDIR"
   else
-    chmod -R +rw "$@"
+    chmod_force -R ugw+rw "$@"
   fi
 }
 
