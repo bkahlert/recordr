@@ -59,8 +59,7 @@ opts+=("--rm")
 opts+=("--name" "$wrapper_name--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
 opts+=("${RECORDRW_IMAGE:-bkahlert/recordr:${RECORDRW_IMAGE_TAG:-latest}}")
 
-# TODO
-echo docker run \
+docker run \
   -e DEBUG="${DEBUG-}" \
   -e TZ="$(date +"%Z")" \
   -e PUID="$(id -u)" \
