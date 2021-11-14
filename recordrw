@@ -25,6 +25,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# Usage: curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+
 declare -a opts=()
 opts+=("-e" "NODE_OPTIONS='--max-old-space-size=16384'")
 opts+=("-e" "TESTING='${TESTING-}'")
