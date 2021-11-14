@@ -1,18 +1,40 @@
+name: docs
+
 on: [push,workflow_dispatch]
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  custom_test:
+  docs:
     runs-on: ubuntu-latest
-    name: Run GitHub actions test
 
     steps:
+      - name: Prepare
+        id: prep
+        run: |
+          echo ::set-output name=recordr_branch::"${{ github.ref_name }}--docs"
+
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Convert terminal sessions to SVG
+      - name: ● REC
         id: recordr
         uses: ./
         with:
-          files: rec/hello-world.rec
-#      - name: Get the pokemon
-#        run: echo "${{ steps.recordr.outputs.files }} attack"
+          branch: ${{ steps.prep.outputs.recordr_branch }}
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v3
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          commit-message: |
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
+          title: |
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
+          body: |
+            Updates ${{ steps.recordr.outputs.file-list }}
+            ${{ steps.recordr.outputs.markdown }}
+          labels: recordr,docs,rec
+          branch: ${{ steps.prep.outputs.recordr_branch }}

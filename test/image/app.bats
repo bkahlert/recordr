@@ -58,8 +58,7 @@ teardown() {
 
 @test "should output only completed files on missing terminal" {
   mkdir -p rec/bar && copy_fixture test.rec rec/foo.rec && copy_fixture test.rec rec/bar/baz.rec
-  image "$BUILD_TAG"
-  assert_success
+  image --stdout-only "$BUILD_TAG"
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_output --regexp 'docs/.*.svg'$'\n''docs/.*.svg'

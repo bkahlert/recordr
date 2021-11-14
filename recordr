@@ -271,7 +271,7 @@ done
 set -- "${args[@]}"
 
 # TODO move to logr
-logr::diag() {
+diag() {
   local opt flag arg
   echo "$0"
   echo "  opts:"
@@ -325,6 +325,10 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 
 # invoke self for each file -> recordr [OPTIONS] base file
 [ $# -eq 2 ] || {
+  [ $# -lt 2 ] || [ -e "$HOME/.config/asciinema/install-id" ] || asciinema auth >&2 || {
+    logr warning "defaulting to parallel=1 due to race condition bug in asciinema"
+  }
+
   declare args=()
   flags['hide-recording']=true
   echo "${esc_red-}●${esc_yellow-}◕${esc_reset-} ${esc_bold-}BATCH PROCESSING${esc_reset-}" >&2
@@ -337,60 +341,110 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
     [ "${flags[$flag]:-false}" = false ] || args+=("--$flag")
   done
 
-  declare -A exit_codes=()
-  trap 'kill "${!exit_codes[@]}"' INT TERM
-  declare count
+  # Prints the number of specified arguments that are empty.
+  unset_count() {
+    local -i count=0
+    while (($#)); do
+      [ "${1-}" ] || count=$((count + 1))
+      shift
+    done
+    echo "$count"
+  }
+
+  # Starts at most the configured number of recordings concurrently.
+  declare -A recs=()
+  # Check for still running processes, terminated and eventually kills them.
+  cleanup() {
+    local -a pids=()
+    for pid in "${!recs[@]}"; do
+      [ "${recs[$pid]}" ] || pids+=("$pid")
+    done
+
+    [ ${#pids[@]} -gt 0 ] || return
+
+    # otherwise attempt to terminate or ultimately kill
+    logr warn --name "BATCH PROCESSING" "aborting... (${#pids[@]}/${#recs[@]})" >&2
+    for pid in "${pids[@]}"; do
+      ! kill -0 "$pid" || kill -TERM "$pid"
+    done
+
+    for pid in "${!pids[@]}"; do
+      ! kill -0 "${pids[$pid]}" || unset "pids[$pid]"
+    done
+
+    if [ ${#pids[@]} -gt 0 ]; then
+      echo "Failed to terminate: ${pids[*]}"
+      for pid in "${pids[@]}"; do
+        ! kill -0 "$pid" || kill -9 "$pid" || echo "Failed to kill $pid"
+      done
+    fi
+
+    if [ "${#pids[@]}" -eq 0 ]; then
+      logr success --name "BATCH PROCESSING" "aborted" >&2
+    else
+      logr warn --name "BATCH PROCESSING" "could not abort ${pids[*]}" >&2
+    fi
+
+    trap - EXIT HUP INT QUIT PIPE
+    trap 'exit' TERM
+    kill -TERM "$$"
+  }
+
+  trap cleanup EXIT HUP INT QUIT PIPE TERM
   for file in "${@:2}"; do
-    tmp=$(mktemp "${opts['build-dir']%/}/status-XXXXXX")
-    (
-      "$0" "${args[@]}" "$1" "$file" || echo "$?" >"$tmp"
-      [ "$(cat "$tmp")" ] || echo "0" >"$tmp"
-    ) &
-    exit_codes["$!"]="$tmp"
-    while true; do
-      count="$(jobs -pr | sed -n '$=')"
-      [ "${count:-0}" -ge "${opts['parallel']}" ] || break
-      wait -n -p process || true
+    "$0" "${args[@]}" "$1" "$file" &
+    recs["$!"]=''
+    [ "${opts['parallel']}" -ne "0" ] || continue
+    while [ "$(unset_count "${recs[@]}")" -ge "${opts['parallel']}" ]; do
+      declare process result
+      if wait -n -p process; then
+        result=$?
+        recs[$process]=$result
+      else
+        result=$?
+        [ "${process-}" ] || {
+          sleep 1
+          continue
+        }
+        recs[$process]=$result
+      fi
     done
   done
 
-  declare failed=0 exit_code
-  wait "${!exit_codes[@]}" || true
-  for tmp in "${exit_codes[@]}"; do
-    exit_code=''
-    [ ! -f "$tmp" ] || {
-      exit_code=$(cat "$tmp")
-      rm -- "$tmp"
-    }
-    [ "${exit_code:--1}" -eq 0 ] || failed=$((failed + 1))
+  # Waits for remaining recordings.
+  while [ "$(unset_count "${recs[@]}")" -ne 0 ]; do
+    declare process result
+    if wait -n -p process; then
+      result=$?
+      recs[$process]=$result
+    else
+      result=$?
+      [ "${process-}" ] || {
+        sleep 1
+        continue
+      }
+      recs[$process]=$result
+    fi
   done
 
-  [ "$failed" -lt $# ] || logr fail --name "BATCH PROCESSING" >&2
-  [ "$failed" -eq 0 ] || logr warn --name "BATCH PROCESSING" "COMPLETED WITH ERRORS" || exit $? >&2
+  declare failed exit_code
+  for rec in "${!recs[@]}"; do
+    exit_code=${recs[$rec]}
+    [ "$exit_code" -eq 0 ] || failed=$((${failed-0} + 1))
+  done
+
+  trap 'logr cleanup' EXIT ERR
+  [ ! "${failed-}" ] || [ "$failed" -lt $(($# - 1)) ] || logr fail --name "BATCH PROCESSING" >&2
+  [ "${failed-0}" -eq 0 ] || logr warn --name "BATCH PROCESSING" "COMPLETED WITH ERRORS" >&2 || exit "$?"
   logr success --name "BATCH PROCESSING" "COMPLETED" >&2
   exit
 }
 
-# one arg left = relative path to rec file
-declare rec_file=${2#./}                                         # e.g. foo.rec
-declare real_rec_file=${1%/}/$rec_file                           # e.g. rec/foo.rec
-[ -e "$real_rec_file" ] || logr error --name "NOT FOUND" --code "$EX_USAGE" "$real_rec_file"
-[ -r "$real_rec_file" ] || logr error --name "NOT READABLE" --code "$EX_NOINPUT" "$real_rec_file"
+# Converts the specified rec file to a recordable script.
+rec_to_recordable() {
+  local rec_file=${1?rec file missing} recordable_file=${2?target missing}
 
-declare build_file=${opts['build-dir']%/}/${rec_file#/} # e.g. build/rec/foo.rec
-declare recordable_file=${build_file%.rec}.sh           # e.g. build/rec/foo.sh
-declare cast_file=${build_file%.rec}.cast               # e.g. build/rec/foo.rec
-declare svg_file=${build_file%.rec}.svg                 # e.g. build/rec/foo.svg
-mkdir -p "${build_file%/*}"
-
-[ ! "${opts['out-dir']-}" ] || {
-  declare out_file=${opts['out-dir']%/}/${rec_file#/} # e.g. docs/foo.rec
-  declare out_svg_file=${out_file%.rec}.svg           # e.g. docs/foo.svg
-  mkdir -p "${out_svg_file%/*}"
-}
-
-echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${real_rec_file#./}${esc_reset-}" >&2
-declare exit_code_printing_block='
+  declare exit_code_printing_block='
   # highlight non-0 exit code
   [ "$_status" -eq 0 ] || {
     col=$(('"${opts['columns']-80}"' -"${#_status}" -3))
@@ -399,13 +453,13 @@ declare exit_code_printing_block='
   }
   echo
 '
-declare countdown_call="count_down ${opts['restart-delay']}"
-{
-  echo '#!/usr/bin/env bash'
-  [ ! "${opts['indicator']-}" ] || echo "export ${opts['indicator']}=1"
-  [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
-  # language=sh
-  cat <<'INSTRUMENTATION'
+  declare countdown_call="count_down ${opts['restart-delay']}"
+  {
+    echo '#!/usr/bin/env bash'
+    [ ! "${opts['indicator']-}" ] || echo "export ${opts['indicator']}=1"
+    [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
+    # language=sh
+    cat <<'INSTRUMENTATION'
 # Restarts in the specified number of seconds
 count_down() {
   local seconds=${1:-5}
@@ -456,120 +510,181 @@ rec() {
   }
   rm -- "$tmp"
 INSTRUMENTATION
-  echo "$exit_code_printing_block"
-  echo "}"
-  echo "trap '$countdown_call' EXIT"
-  echo "# END OF INSTRUMENTATION"
-  echo "("
-  cat "$real_rec_file"
-  echo ') || _status=$?'
-  echo "$exit_code_printing_block"
-} >"$recordable_file"
+    echo "$exit_code_printing_block"
+    echo "}"
+    echo "trap '$countdown_call' EXIT"
+    echo "# END OF INSTRUMENTATION"
+    echo "("
+    cat "$rec_file"
+    echo ') || _status=$?'
+    echo "$exit_code_printing_block"
+  } >"$recordable_file"
+}
 
-[ ! -e "$cast_file" ] || rm -- "$cast_file"
-(
-  [ "${flags['hide-recording']:-false}" = false ] || exec &>/dev/null
+# Records the specified script to the specified target.
+record() {
+  local rec_file=${1?"rec file missing"} recordable_file=${2?recordable file missing} target=${3?"target missing"}
+  echo " ${esc_red-}●${esc_reset-} RECORDING: ${esc_bold-}${rec_file#./}${esc_reset-}" >&2
+  local err_file="${target%.*}.asciinema"
+  rec_to_recordable "$rec_file" "$recordable_file"
+
+  local -a asciinema_args=("rec")
+  asciinema_args+=("--command" "bash '$recordable_file'")
+
+  [ ! "${DEBUG:-0}" = 0 ] || asciinema_args+=("--quiet")
+
+  [ ! -e "$target" ] || rm -- "$target"
+  asciinema_args+=("--overwrite")
+  asciinema_args+=("$target")
+
   export TMPDIR
-  TERM=${opts['term']-} \
-    asciinema rec \
-    --command "bash '$recordable_file'" \
-    --quiet \
-    "$cast_file" >&2
-) || logr error --name "RECORDING" "asciinema did exit $? while recording $recordable_file"
+  (
+    if [ "${flags['hide-recording']:-false}" = false ]; then
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file"
+    else
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file" >/dev/null
+    fi
+  ) || {
+    local asciinema_status=$? name="RECORDING" err_message indent
+    printf -v indent '%*s' "$((${#name} +5))" ''
+    err_message=$(cat "$err_file")
+    err_message="$indent${err_message//$'\n'/$'\n'$indent}"
+    logr error --name "$name" "asciinema did exit $asciinema_status while recording $recordable_file to $target"$'\n'"$err_message"
+  }
+}
 
-echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
-declare -a svg_term_args=()
-[ ! -e "$svg_file" ] || rm -- "$svg_file"
-[ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
-[ ! "${opts['rows']-}" ] || svg_term_args+=("--height" "${opts['rows']}")
-[ ! "${opts['term-profile']-}" ] || svg_term_args+=(
-  "--term" "${supported_profiles["${opts['term-profile']##*.}"]}"
-  "--profile" "$(cd "${opts['term-profile']%/*}" && pwd)/${opts['term-profile']##*/}"
-)
-(
-  LC_ALL=C svg-term \
-    --in "$cast_file" \
-    --out "$svg_file" \
-    --padding-x 20 \
-    --padding-y 20 \
-    ${svg_term_args[@]+"${svg_term_args[@]}"} \
-    --window >&2
-) || logr error --name "CONVERTING" "svg-term did exit $? while recording $cast_file"
+# Converts the specified cast file to the specified SVG file.
+convert() {
+  local cast_file=${1?cast file missing} svg_file=${2?SVG file missing}
 
-[ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
-cp "$svg_file" "$svg_file.0" || logr fail -x "$svg_file"
+  echo " ${esc_yellow-}◔${esc_reset-} CONVERTING: ${esc_bold-}${cast_file#./}${esc_reset-}" >&2
+  declare -a svg_term_args=()
+  [ ! -e "$svg_file" ] || rm -- "$svg_file"
+  [ ! "${opts['columns']-}" ] || svg_term_args+=("--width" "${opts['columns']}")
+  [ ! "${opts['rows']-}" ] || svg_term_args+=("--height" "${opts['rows']}")
+  [ ! "${opts['term-profile']-}" ] || svg_term_args+=(
+    "--term" "${supported_profiles["${opts['term-profile']##*.}"]}"
+    "--profile" "$(cd "${opts['term-profile']%/*}" && pwd)/${opts['term-profile']##*/}"
+  )
+  (
+    LC_ALL=C svg-term \
+      --in "$cast_file" \
+      --out "$svg_file" \
+      --padding-x 20 \
+      --padding-y 20 \
+      ${svg_term_args[@]+"${svg_term_args[@]}"} \
+      --window
+  ) || logr error --name "CONVERTING" "svg-term did exit $? while converting $cast_file to $svg_file" >&2
+}
 
-# post-process SVG
-echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${svg_file#./}.0${esc_reset-}" >&2
-# replace deprecated xmlns:xlink by xlink, see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
-declare svg css=''
-svg=$(
+# Replace deprecated xmlns:xlink by xlink, see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
+# and adds the container class to ease further manipulations.
+patch() {
+  local source=${1?cast file missing} target=${2?SVG file missing}
+
+  echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${source#./}${esc_reset-}" >&2
+
   LC_ALL=C sed \
+    -u \
     -e 's, xmlns:xlink="http://www.w3.org/1999/xlink",,g' \
     -e 's,xlink:href,href,g' \
     -e 's, font-family="[^"]*", class="container",g' \
-    "$svg_file.0" \
-    | tee "$svg_file.1"
-)
+    "$source" >"$target" || logr error --name "PATCHING" "sed did exit $? while patching $source to $target" >&2
+}
 
-# highlight links
-echo " ${esc_yellow-}◕${esc_reset-} LINKING: ${esc_bold-}${svg_file#./}.1${esc_reset-}" >&2
-svg=$(
-  title='Displayed as link in supporting terminal emulators'
-  optional='\{0\,1\}'
-  plus='\{1\,\}'
-  schema='[^:/?#<]'"$plus"
-  host='\(//[^/?#<]*\)'"$optional"
-  path='[^?#<]*'
-  query='\(\?[^#<]*\)'"$optional"
-  hash='\(#\([^<]*\)\)'"$optional"
-  url='\('"$schema:$host$path$query$hash"'\)'
-  LC_ALL=C sed 's,\(<text[^>]*>'"$url"'[^<]*</text>\),<a href="\2"><title>'"$title"'</title>\1</a>,g' \
-    "$svg_file.1" \
-    | tee "$svg_file.2"
-)
-cp "$svg_file.1" "$svg_file.2"
+# Highlights links
+highlight_links() {
+  local source=${1?cast file missing} target=${2?SVG file missing}
+  echo " ${esc_yellow-}◕${esc_reset-} LINKING: ${esc_bold-}${source#./}${esc_reset-}" >&2
+  local -r title='Displayed as link in supporting terminal emulators'
+  local -r optional='\{0\,1\}'
+  local -r plus='\{1\,\}'
+  local -r schema='[^:/?#<]'"$plus"
+  local -r host='\(//[^/?#<]*\)'"$optional"
+  local -r path='[^?#<]*'
+  local -r query='\(\?[^#<]*\)'"$optional"
+  local -r hash='\(#\([^<]*\)\)'"$optional"
+  local -r url='\('"$schema:$host$path$query$hash"'\)'
+  LC_ALL=C sed \
+    -u \
+    -e 's,\(<text[^>]*>'"$url"'[^<]*</text>\),<a href="\2"><title>'"$title"'</title>\1</a>,g' \
+    "$source" >"$target" || logr error --name "LINKING" "sed did exit $? while linking $source to $target"
+}
 
-# highlight inserted line feeds
-echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${svg_file#./}.2${esc_reset-}" >&2
-svg=$(
-  LC_ALL=C sed 's,<path[^>]*>\(<text[^>]*>\)␊<,\1<tspan class="inserted-lf">⮐</tspan><,g' \
-    "$svg_file.2" \
-    | tee "$svg_file.3"
-)
-css+=".inserted-lf{fill:#999999;fill-opacity:.75;font-variant-position:sub;font-size:75%}"
+# Highlights inserted line feeds, updates fonts, and missing line at terminal end
+annotate() {
+  local source=${1?cast file missing} intermediate=${2?intermediate file missing} target=${3?SVG file missing}
+  echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${source#./}${esc_reset-}" >&2
+  LC_ALL=C sed \
+    -u \
+    -e 's,<path[^>]*>\(<text[^>]*>\)␊<,\1<tspan class="inserted-lf">⮐</tspan><,g' \
+    "$source" >"$intermediate" || logr error --name "ANNOTATING" "sed did exit $? while annotating $source to $intermediate" >&2
 
-# patch fonts
-declare fonts
-printf -v fonts ",'%s'" "JetBrains Mono" "Monaco" "Con""sol""as" "Men""lo" "Bitstream Vera Sans Mono" "Luc""ida Console" \
-  "Ubuntu Mono" "Mes""lo for Powerline" "Mes""lo LG M for Powerline" "Powerline Symbols" "Monospace" "monospace"
-css+=".container{font-family:${fonts:1}}"
+  declare svg css=''
+  svg=$(cat "$intermediate")
+  css+=".inserted-lf{fill:#999999;fill-opacity:.75;font-variant-position:sub;font-size:75%}"
 
-# patch otherwise missing line at terminal end
-css+=".container>g{animation-play-state:running}"
-css+=".container_end{fill:whitesmoke;mix-blend-mode:soft-light;opacity:0;transition:opacity .2s ease-in-out}"
-css+=".container:hover>g{animation-play-state:paused}"
-css+=".container{pointer-events:all}"
-css+=".container:hover{cursor:wait}"
-css+=".container:hover>.container_end{opacity:1}"
-declare container_end='<svg height="100%" width="100%" viewBox="0 0 100 100" class="container_end">'
-container_end+='<text text-anchor="middle" alignment-baseline="central">'
-container_end+='<tspan y="50" x="50" style="font-size: 50px;">❚❚</tspan></text></svg>'
-svg="${svg/%<\/g><\/svg><\/svg>/$container_end<\/g><\/svg><\/svg>}"
+  # patch fonts
+  declare fonts
+  printf -v fonts ",'%s'" "JetBrains Mono" "Monaco" "Con""sol""as" "Men""lo" "Bitstream Vera Sans Mono" "Luc""ida Console" \
+    "Ubuntu Mono" "Mes""lo for Powerline" "Mes""lo LG M for Powerline" "Powerline Symbols" "Monospace" "monospace"
+  css+=".container{font-family:${fonts:1}}"
 
-# patch otherwise missing line at terminal end
-css+=".container>g>svg>svg>*{transform: scaleY(.95);}"
+  # patch otherwise missing line at terminal end
+  css+=".container>g{animation-play-state:running}"
+  css+=".container_end{fill:whitesmoke;mix-blend-mode:soft-light;opacity:0;transition:opacity .2s ease-in-out}"
+  css+=".container:hover>g{animation-play-state:paused}"
+  css+=".container{pointer-events:all}"
+  css+=".container:hover{cursor:wait}"
+  css+=".container:hover>.container_end{opacity:1}"
+  declare container_end='<svg height="100%" width="100%" viewBox="0 0 100 100" class="container_end">'
+  container_end+='<text text-anchor="middle" alignment-baseline="central">'
+  container_end+='<tspan y="50" x="50" style="font-size: 50px;">❚❚</tspan></text></svg>'
+  svg="${svg/%<\/g><\/svg><\/svg>/$container_end<\/g><\/svg><\/svg>}"
 
-# write back SVG
-printf '%s\n' "${svg/<style>/<style>$css}" >"$svg_file"
+  # patch otherwise missing line at terminal end
+  css+=".container>g>svg>svg>*{transform: scaleY(.95);}"
 
-[ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file '$svg_file' unexpectedly missing" --stacktrace
-[ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
-[ ! "${out_svg_file-}" ] || [ "${flags['delete-build']:-false}" = false ] || rm -- "$svg_file" "$svg_file".*
-[ "${flags['delete-build']:-false}" = false ] || rm -- "$recordable_file" "$cast_file"
+  # write back SVG
+  printf '%s\n' "${svg/<style>/<style>$css}" >"$target"
+}
 
-# always print nice output to STDERR
-echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
+# Records and converts the specified rec file
+record_and_convert() {
+  declare rec_file=${2#./}               # e.g. foo.rec
+  declare real_rec_file=${1%/}/$rec_file # e.g. rec/foo.rec
+  [ -e "$real_rec_file" ] || logr error --name "NOT FOUND" --code "$EX_USAGE" "$real_rec_file"
+  [ -r "$real_rec_file" ] || logr error --name "NOT READABLE" --code "$EX_NOINPUT" "$real_rec_file"
 
-# print completed file path to STDOUT if any output is redirected
-{ [ -t 1 ] && [ -t 2 ]; } || echo "${out_svg_file#./}"
+  declare build_file=${opts['build-dir']%/}/${rec_file#/} # e.g. build/rec/foo.rec
+  declare recordable_file=${build_file%.rec}.sh           # e.g. build/rec/foo.sh
+  declare cast_file=${build_file%.rec}.cast               # e.g. build/rec/foo.rec
+  declare svg_file=${build_file%.rec}.svg                 # e.g. build/rec/foo.svg
+  mkdir -p "${build_file%/*}"
+
+  [ ! "${opts['out-dir']-}" ] || {
+    declare out_file=${opts['out-dir']%/}/${rec_file#/} # e.g. docs/foo.rec
+    declare out_svg_file=${out_file%.rec}.svg           # e.g. docs/foo.svg
+    mkdir -p "${out_svg_file%/*}"
+  }
+
+  [ ! "$(find "${svg_file%/*}" -name "${svg_file##*/}.*")" ] || rm -- "$svg_file".*
+  record "$real_rec_file" "$recordable_file" "$cast_file"
+  convert "$cast_file" "$svg_file.0"
+  patch "$svg_file.0" "$svg_file.1"
+  highlight_links "$svg_file.1" "$svg_file.2"
+  annotate "$svg_file.2" "$svg_file.3" "$svg_file"
+
+  [ -e "$svg_file" ] || logr error --code "$EX_SOFTWARE" "svg-file '$svg_file' unexpectedly missing" --stacktrace
+  [ "${out_svg_file-}" = "$svg_file" ] || cp "$svg_file" "$out_svg_file"
+  [ ! "${out_svg_file-}" ] || [ "${flags['delete-build']:-false}" = false ] || rm -- "$svg_file" "$svg_file".*
+  [ "${flags['delete-build']:-false}" = false ] || rm -- "$recordable_file" "$cast_file"
+
+  # always print nice output to STDERR
+  echo " ${esc_green-}●${esc_reset-} COMPLETED: ${esc_bold-}${out_svg_file#./}${esc_reset-}" >&2
+
+  # print completed file path to STDOUT if any output is redirected
+  { [ -t 1 ] && [ -t 2 ]; } || echo "${out_svg_file#./}"
+}
+
+record_and_convert "$@"

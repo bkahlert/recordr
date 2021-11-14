@@ -88,13 +88,6 @@ esc() {
         [ ! -v "$app_no_color" ] || [ "${!app_no_color:-false}" = false ] || no_color=1
         # shellcheck disable=SC2015,SC2034
         [ ! -t 2 ] || [ "${TERM-}" = dumb ] || [ "${no_color-}" ] || {
-          # updates COLUMNS and LINES and calls optional callback with these dimensions
-          tty_change_handler() {
-            COLUMNS=$({ tput cols || tput co; }) && LINES=$({ tput lines || tput li; })
-            [ ! "${1-}" ] || [ ! "$(type -t "$1")" = function ] || "$1" "$COLUMNS" "$LINES"
-          }
-          trap 'tty_change_handler tty_changed' WINCH      # calls 'tty_changed' if defined and dimensions changed
-          tty_change_handler tty_init 2>&3                 # calls 'tty_init' if defined
           tty_connected=true                               # if set, signifies a connected terminal
           esc_alt=$(tput smcup || tput ti)                 # start alt display
           esc_alt_end=$(tput rmcup || tput te)             # end alt display
@@ -630,7 +623,7 @@ headr() {
 #   1 - error
 #   * - signal
 logr() {
-  local inv=("$@") args=() code=${LOGR_ALIAS_CODE:-$?} usage="[-i | --inline] COMMAND [ARGS...]" inline
+  local inv=("$@") args=() code=${LOGR_ALIAS_CODE:-$?} usage="[-i | --inline] COMMAND [ARGS...]" exit inline
   while (($#)); do
     case $1 in
       -i | --inline)
@@ -679,36 +672,29 @@ logr() {
       # Unified signal handler run when shell receives signals earlier registered using handle.
       signal_handler() {
         local signal="$1" status="$2" command="$3" location="$4"
+        logr cleanup
         case $signal in
         EXIT)
-          logr _cleanup
-          ;;
-        HUP)
-          logr _cleanup
-          trap - "$signal" && kill -s "$signal" "$$"
-          ;;
-        INT | TERM)
-          logr _cleanup
-          trap - "$signal" && kill -s "$signal" "$$"
+          return 0
           ;;
         ERR)
-          logr _cleanup
           [ "${status:-1}" -ne 0 ] || return 0
           status="${esc_red-}${status:-?} ${ICONS['exit']}${esc_reset-}"
           logr fatal --name "${0##*/}" "%s %s\n     %s %s" "$status" "$command" 'at' "$location"
           ;;
         esac
+
+        trap - EXIT HUP INT QUIT PIPE TERM
+        kill -TERM $$
       }
-      handle EXIT HUP INT TERM ERR # no QUIT one's not supposed to cleanup
+      handle HUP INT QUIT PIPE TERM
+      [ "${TESTING-}" ] || handle ERR
       esc cursor_hide
       ;;
-    _cleanup)
+
+    cleanup)
       shift
       esc cursor_show
-      local job_pid
-      for job_pid in $(jobs -pr); do
-        kill "$job_pid" &>/dev/null || true
-      done
       ;;
 
     created | added | item | info)
@@ -961,6 +947,7 @@ logr() {
               -e 's/^/'"$MARGIN${esc_red-}"'/;' \
               -e 's/$/'"${esc_reset-}"'/;' \
               "$log_file"
+            logr cleanup
             exit $task_exit_status
           } >&2
         else
@@ -1137,11 +1124,11 @@ main() {
     [[ ":${BASHOPTS}:" != *":$1:"* ]] || return 0
     shopt -s "$1" || logr error "unsupported shell option" --stacktrace -- "$@"
   }
-  require_shopt checkjobs           # check for running jobs before exiting
   require_shopt globstar            # ** matches all files and any number of dirs and sub dirs
+  require_shopt checkwinsize        # updates COLUMNS and LINES
   stty -echoctl 2>/dev/null || true # don't echo control characters in hat notation (e.g. `^C`)
 
-  [ "${TESTING-}" ] || logr _init
+  logr _init
 
   [ ! "${RECORDING-}" ] || return "$EX_OK"
   [[ " $* " == *" -!- "* ]] || return "$EX_OK"

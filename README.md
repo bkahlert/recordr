@@ -8,8 +8,8 @@ files located at `./rec` and puts them in `./docs`.
 [![recorded terminal session demonstrating the recordr tool](docs/demo.svg "Recordr Demo")  
 *Recordr Demo*](../../raw/master/docs/demo.svg)
 
-[![recorded terminal session demonstrating the recordr tool recording the demo](docs/recordr.svg "Recordr recording the Recordr Demo")  
-*Recordr recording the Recordr Demo*](../../raw/master/docs/recordr.svg)
+[![recorded terminal session demonstrating the recordr tool recording the demo](docs/recording-demo.svg "Recordr recording the Recordr Demo")  
+*Recordr recording the Recordr Demo*](../../raw/master/docs/recording-demo.svg)
 
 [![recorded terminal session demonstrating the logr logging library](docs/logr.svg "logr Demo")  
 *Recordr recording the logr Demo*](../../raw/master/docs/logr.svg)

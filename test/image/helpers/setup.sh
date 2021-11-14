@@ -57,11 +57,7 @@ image() {
   ) || status=$?
   [ "${status-}" ] || status=0
   batsw_separate_lines lines output
-  if [ "$expected_status" -eq 0 ]; then
-    assert_success
-  else
-    assert_failure "$expected_status"
-  fi
+  assert_status "$expected_status"
   assert_container_status "$BATS_TEST_NAME" exited
 }
 

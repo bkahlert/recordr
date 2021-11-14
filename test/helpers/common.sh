@@ -182,6 +182,18 @@ with_shell_option() {
   return "$result"
 }
 
+# Splits the specified variable to an array like it would be the case if a program was called,
+# that is, its value is word-split along the whitespaces while *honoring* quotes.
+# Arguments:
+#   1 - variable name
+split_to_array() {
+  # Assigns the arguments array to the variable with the name of the first element.
+  program() { eval "$1"='("${@:2}")'; }
+  [ ! -v "$1" ] || eval program "$1" "${!1}"
+  [ -v "$1" ] || eval "declare -a -g $1=()"
+  unset program
+}
+
 # Provides access to the specified internal Bats function
 # by re-declaring with with a `batsw` prefix (instead of `bats`).
 #
@@ -335,6 +347,74 @@ patch_lib() {
       done
       ;;
   esac
+}
+
+# Tests if the current status matches the expected status.
+# Arguments:
+#   1 - expected status
+assert_status() {
+  if [ "$1" -eq 0 ]; then
+    assert_success
+  else
+    assert_failure "$1"
+  fi
+}
+
+# Runs the specified command in a copy of the current working directory,
+# and stores the status, output, lines and used working directory
+# to variables prefixed with the provided prefix-not modifying the current ones.
+# Arguments:
+#   1 - prefix (e.g. `foo`)
+#   2 - command (e.g. `echo 'bar'`)
+#       will generate foo_status=0 foo_output="bar" foo_lines=("bar") foo_workdir="$BATS_TMPDIR/..."
+different_run() {
+  local prefix=${1?prefix missing} command=${2?command missing} dir copy
+  dir=$(pwd)
+  copy="$(mktemp "${BATS_TMPDIR}/assert-alias-XXXXXX")"
+  [ ! -e "$copy" ] || rm "$copy"
+  cp -R "$dir" "$copy"
+  cd "$copy" || fail "Failed to change working directory to $copy"
+  split_to_array command
+  if [ "$prefix" ]; then
+    eval '__backup__status=${status-}'
+    eval '__backup__output=${output-}'
+    eval '__backup__lines=${lines-}'
+    eval '__backup__workdir=${workdir-}'
+    run "${command[@]}"
+    eval "${prefix}status=\${status-}"
+    eval "${prefix}output=\${output-}"
+    eval "${prefix}lines=\${lines-}"
+    eval "${prefix}workdir=\${copy-}"
+    eval 'status=$__backup__status'
+    eval 'output=$__backup__output'
+    eval 'lines=$__backup__lines'
+    eval 'workdir=$__backup__workdir'
+  else
+    run "${command[@]}"
+    eval 'workdir=$copy'
+  fi
+  cd "$dir" || fail "Failed to change working directory back to $dir"
+}
+
+# Compares the status, output and workdir contents of the first argument executed
+# with `run`, with each status, output and workdir contents of the remaining
+# arguments executed with `run`.
+# Assertions passes if the status, output and workdir contents of all
+# arguments/aliases match those of the first argument/original.
+# Arguments:
+#   1 - command whose status, output and workdir contents are compared
+#   * - commands whose statuses, outputs and workdir contents are compared with
+#       those of $1
+assert_alias() {
+  local workdir alias__status alias__output alias__workdir
+  different_run '' "${1?command missing}" && shift
+
+  for alias in "$@" ; do
+    different_run 'alias__' "$alias" && shift
+    assert_status "$alias__status"
+    assert_output --partial "$alias__output"
+    assert_equal "$(diff -r "$workdir" "$alias__workdir")" ''
+  done
 }
 
 # Tests if at least one log line matches the provided arguments.

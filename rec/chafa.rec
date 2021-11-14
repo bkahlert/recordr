@@ -52,7 +52,7 @@ else
   container=$(
     docker run \
       --detach \
-      --name "chafa-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 | head -c 3)" \
+      --name "chafa-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
       "${mounts[@]}" \
       rafib/awesome-cli-binaries \
       bash -c "while true; do sleep 1; done"
