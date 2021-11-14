@@ -349,6 +349,32 @@ patch_lib() {
   esac
 }
 
+# `chmod` command that applies the specified settings using a root user
+# enabled a Docker container.
+chmod_force() {
+  local args=''
+  printf -v args " %q" "$@"
+  docker run \
+    --name "chmod_force--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
+    --rm \
+    -v "$PWD":"$PWD" \
+    -w "$PWD" \
+    ubuntu \
+    bash -c "chmod$args"
+}
+
+# Unlocks the specified files, that is, makes them
+# readable and writable for everyone.
+unlock() {
+  require_test
+  if [ $# -eq 0 ]; then
+    chmod -R +rw "$BATS_TEST_TMPDIR"
+  else
+    chmod -R +rw "$@"
+  fi
+}
+
+
 # Tests if the current status matches the expected status.
 # Arguments:
 #   1 - expected status
