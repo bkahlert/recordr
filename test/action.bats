@@ -23,16 +23,37 @@ teardown() {
   unlock
 }
 
-act() {
+actw() {
+  local -a opts=()
+  opts+=("-e" "TESTING=${TESTING-}")
+  opts+=("-e" "RECORDING=${RECORDING-}")
+  opts+=("-e" "TERM=${TERM-}")
+
+  # Adds the given arguments to the opts array
+  opts() { eval 'opts+=("$@")'; }
+  [ ! -t 0 ] || opts+=("--interactive")
+  [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
+  [ ! -v ACTW_ARGS ] || eval opts "$ACTW_ARGS"
+  opts+=("--rm")
+  opts+=("--name" "${FUNCNAME[0]}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
+  opts+=("${ACTW_IMAGE:-efrecon/act:${ACTW_IMAGE_TAG:-v0.2.24}}")
+
   docker run \
-    --name "act--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
-    --rm \
+    -e DEBUG="${DEBUG-}" \
+    -e TZ="$(date +"%Z")" \
+    -e PUID="$(id -u)" \
+    -e PGID="$(id -g)" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":"$PWD" \
     -w "$PWD" \
-    efrecon/act:v0.2.24 \
-    -b \
-    -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
+    "${opts[@]+"${opts[@]}"}" \
+    "$@"
+}
+
+act() {
+  actw \
+    --bind \
+    --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
     "$@"
 }
 
