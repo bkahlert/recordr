@@ -1,14 +1,15 @@
 name: docs
 
+# TODO chafa not complete
 on:
   push:
     branches: ['master']
     tags: ['v*']
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md','**.svg']
   pull_request:
     branches: ['master']
     tags: ['dependencies']
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md','**.svg']
   workflow_dispatch:
 
 concurrency:
