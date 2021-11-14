@@ -28,19 +28,19 @@
 # Usage: curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 
 declare -a opts=()
-opts+=("-e" "NODE_OPTIONS='--max-old-space-size=16384'")
-opts+=("-e" "TESTING='${TESTING-}'")
-opts+=("-e" "RECORDING='${RECORDING-}'")
-opts+=("-e" "TERM='${TERM-}'")
+opts+=("-e" "NODE_OPTIONS=--max-old-space-size=16384")
+opts+=("-e" "TESTING=${TESTING-}")
+opts+=("-e" "RECORDING=${RECORDING-}")
+opts+=("-e" "TERM=${TERM-}")
 
 # Adds the given arguments to the opts array
 opts() { eval 'opts+=("$@")'; }
 [ ! -t 0 ] || opts+=("--interactive")
 [ ! -t 1 ] || [ ! -t 2 ] || [ "${TERM-}" = dumb ] || opts+=("--tty")
-[ ! -v DOCKER_ARGS ] || eval opts "$DOCKER_ARGS"
+[ ! -v RECORDRW_ARGS ] || eval opts "$RECORDRW_ARGS"
 opts+=("--rm")
 opts+=("--name" "${0##*/}--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
-opts+=("${DOCKER_IMAGE:-bkahlert/recordr:${DOCKER_IMAGE_TAG:-latest}}")
+opts+=("${RECORDRW_IMAGE:-bkahlert/recordr:${RECORDRW_IMAGE_TAG:-latest}}")
 
 docker run \
   -e DEBUG="${DEBUG-}" \

@@ -13,11 +13,11 @@ setup() {
   cp "$BATS_CWD/logr.sh" .
   mkdir -p rec/bar
 
-  export DOCKER_ARGS
-  DOCKER_ARGS=$(cat <<DOCKER_ARGS
+  export RECORDRW_ARGS
+  RECORDRW_ARGS=$(cat <<RECORDRW_ARGS
 -v "$BATS_CWD/recordr":/usr/local/bin/recordr \
 -v "$BATS_CWD/logr.sh":/usr/local/bin/logr.sh
-DOCKER_ARGS
+RECORDRW_ARGS
 )
 }
 

@@ -55,12 +55,12 @@ jobs:
           files: rec/hello-world.rec
 WORKFLOW
 
-  export DOCKER_ARGS
-  DOCKER_ARGS=$(
-    cat <<DOCKER_ARGS
+  export RECORDRW_ARGS
+  RECORDRW_ARGS=$(
+    cat <<RECORDRW_ARGS
 -v "$PWD/recordr":/usr/local/bin/recordr \
 -v "$PWD/logr.sh":/usr/local/bin/logr.sh
-DOCKER_ARGS
+RECORDRW_ARGS
   )
 
   run act -j test
