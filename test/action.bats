@@ -19,6 +19,10 @@ setup() {
   copy_fixture test.rec rec/hello-world.rec
 }
 
+teardown() {
+  chmod -R +rw "$BATS_TEST_TMPDIR"
+}
+
 act() {
   docker run \
     --name "act--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
@@ -32,7 +36,7 @@ act() {
     "$@"
 }
 
-@test "should run action" {
+@test "Xshould run action" {
   local workflows="$BATS_TEST_TMPDIR/.github/workflows"
   mkdir -p "$workflows"
   cat <<WORKFLOW >"$workflows/act-test.yml"
@@ -59,20 +63,18 @@ WORKFLOW
 DOCKER_ARGS
   )
 
-  local expected
-  expected=$(
-    cat <<'EXPECTED'
-[test workflow/test]   ⚙  ::set-output:: status=0
+  run act -j test
+  assert_output --partial '[test workflow/test]   ⚙  ::set-output:: status=0
 [test workflow/test]   ⚙  ::set-output:: files=docs/hello-world.svg
 [test workflow/test]   ⚙  ::set-output:: file-list=docs/hello-world.svg
 [test workflow/test]   ⚙  ::set-output:: markdown=<details>
 <summary>docs/hello-world.svg</summary>
-<h3>Preview</h3>
-
-[![description of the contents of hello-world](../raw/feature/github-action--recordr/docs/hello-world.svg "Title of Hello World")
-*Title of Hello World*](../raw/feature/github-action--recordr/docs/hello-world.svg)
-
-<h3>Markdown</h3>
+<h3>Preview</h3>'
+  assert_output --partial '[![description of the contents of hello-world](../raw/'
+  assert_output --partial '/docs/hello-world.svg "Title of Hello World")'
+  assert_output --partial '*Title of Hello World*](../raw/'
+  assert_output --partial '/docs/hello-world.svg)'
+  assert_output --partial '<h3>Markdown</h3>
 
 ```markdown
 [![description of the contents of hello-world](docs/hello-world.svg "Title of Hello World")
@@ -80,10 +82,5 @@ DOCKER_ARGS
 ```
 
 </details>
-[test workflow/test]   ✅  Success - ● REC
-EXPECTED
-  )
-
-  run act -j test
-  assert_output --partial "$expected"
+[test workflow/test]   ✅  Success - ● REC'
 }
