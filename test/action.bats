@@ -77,6 +77,36 @@ act() {
 RECORDRW_ARGS
   )
 
+  echo "  act:"
+  printf "    STDIN: "
+  if [ -t 0 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDOUT: "
+  if [ -t 1 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDERR: "
+  if [ -t 2 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+
+  echo "  file descriptors:"
+  if command -v lsof >/dev/null; then
+    lsof -p $$
+  elif command -v fstat >/dev/null; then
+    fstat -p $$
+  elif [ -e /proc ]; then
+    ls -l /proc/$$/fd
+  else
+    echo "Failed to list open file descriptors for process $$"
+  fi
   actw \
     --bind \
     --env TESTING="${TESTING-}" \
@@ -107,6 +137,36 @@ jobs:
           files: rec/hello-world.rec
 WORKFLOW
 
+  echo "  action:"
+  printf "    STDIN: "
+  if [ -t 0 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDOUT: "
+  if [ -t 1 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDERR: "
+  if [ -t 2 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+
+  echo "  file descriptors:"
+  if command -v lsof >/dev/null; then
+    lsof -p $$
+  elif command -v fstat >/dev/null; then
+    fstat -p $$
+  elif [ -e /proc ]; then
+    ls -l /proc/$$/fd
+  else
+    echo "Failed to list open file descriptors for process $$"
+  fi
   run act -j test
   assert_output --partial '[test workflow/test]   ⚙  ::set-output:: status=0
 [test workflow/test]   ⚙  ::set-output:: files=docs/hello-world.svg

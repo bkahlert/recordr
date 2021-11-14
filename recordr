@@ -276,35 +276,35 @@ diag() {
   echo "$0"
 
   echo "  terminal:"
-    printf "    STDIN: "
-    if [ -t 0 ]; then
-      echo "yes"
-    else
-      echo "no"
-    fi
-    printf "    STDOUT: "
-    if [ -t 1 ]; then
-      echo "yes"
-    else
-      echo "no"
-    fi
-    printf "    STDERR: "
-    if [ -t 2 ]; then
-      echo "yes"
-    else
-      echo "no"
-    fi
+  printf "    STDIN: "
+  if [ -t 0 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDOUT: "
+  if [ -t 1 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+  printf "    STDERR: "
+  if [ -t 2 ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
 
   echo "  file descriptors:"
-    if command -v lsof >/dev/null; then
-      lsof -p $$
-    elif command -v fstat >/dev/null; then
-      fstat -p $$
-    elif [ -e /proc ]; then
-      ls -l /proc/$$/fd
-    else
-      echo "Failed to list open file descriptors for process $$"
-    fi
+  if command -v lsof >/dev/null; then
+    lsof -p $$
+  elif command -v fstat >/dev/null; then
+    fstat -p $$
+  elif [ -e /proc ]; then
+    ls -l /proc/$$/fd
+  else
+    echo "Failed to list open file descriptors for process $$"
+  fi
 
   echo "  opts:"
   for opt in "${!opts[@]}"; do
@@ -581,7 +581,7 @@ record() {
     fi
   ) || {
     local asciinema_status=$? name="RECORDING" err_message indent
-    printf -v indent '%*s' "$((${#name} +5))" ''
+    printf -v indent '%*s' "$((${#name} + 5))" ''
     err_message=$(cat "$err_file")
     err_message="$indent${err_message//$'\n'/$'\n'$indent}"
     logr error --name "$name" "asciinema did exit $asciinema_status while recording $recordable_file to $target"$'\n'"$err_message"
