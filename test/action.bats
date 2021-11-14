@@ -66,6 +66,8 @@ actw() {
     "$@"
 }
 
+# Note: --env arguments are not passed to the act wrapper but to act itself which
+#       provides the corresponding environment variables inside the workflow
 act() {
   export RECORDRW_ARGS
   RECORDRW_ARGS=$(
@@ -76,13 +78,16 @@ RECORDRW_ARGS
   )
 
   actw \
-    --actw:--env --actw:RECORDRW_IMAGE_TAG=edge \
-    --actw:--env --actw:RECORDRW_ARGS="$RECORDRW_ARGS" \
     --bind \
+    --env TESTING="${TESTING-}" \
+    --env RECORDING="${RECORDING-}" \
+    --env TERM="${TERM-}" \
+    --env RECORDRW_IMAGE_TAG=edge \
+    --env RECORDRW_ARGS="${RECORDRW_ARGS-}" \
     --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
     "$@"
 }
-
+# TODO
 @test "Xshould run action" {
   local workflows="$BATS_TEST_TMPDIR/.github/workflows"
   mkdir -p "$workflows"
