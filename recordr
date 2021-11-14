@@ -325,7 +325,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 
 # invoke self for each file -> recordr [OPTIONS] base file
 [ $# -eq 2 ] || {
-  [ $# -lt 2 ] || [ -e "$HOME/.config/asciinema/install-id" ] || asciinema auth >&2 || {
+  [ $# -lt 2 ] || [ -e "$HOME/.config/asciinema/install-id" ] || asciinema auth &>/dev/null || {
     logr warning "defaulting to parallel=1 due to race condition bug in asciinema"
   }
 
@@ -585,7 +585,6 @@ patch() {
   echo " ${esc_yellow-}◑${esc_reset-} PATCHING: ${esc_bold-}${source#./}${esc_reset-}" >&2
 
   LC_ALL=C sed \
-    -u \
     -e 's, xmlns:xlink="http://www.w3.org/1999/xlink",,g' \
     -e 's,xlink:href,href,g' \
     -e 's, font-family="[^"]*", class="container",g' \
@@ -606,7 +605,6 @@ highlight_links() {
   local -r hash='\(#\([^<]*\)\)'"$optional"
   local -r url='\('"$schema:$host$path$query$hash"'\)'
   LC_ALL=C sed \
-    -u \
     -e 's,\(<text[^>]*>'"$url"'[^<]*</text>\),<a href="\2"><title>'"$title"'</title>\1</a>,g' \
     "$source" >"$target" || logr error --name "LINKING" "sed did exit $? while linking $source to $target"
 }
@@ -616,7 +614,6 @@ annotate() {
   local source=${1?cast file missing} intermediate=${2?intermediate file missing} target=${3?SVG file missing}
   echo " ${esc_yellow-}●${esc_reset-} ANNOTATING: ${esc_bold-}${source#./}${esc_reset-}" >&2
   LC_ALL=C sed \
-    -u \
     -e 's,<path[^>]*>\(<text[^>]*>\)␊<,\1<tspan class="inserted-lf">⮐</tspan><,g' \
     "$source" >"$intermediate" || logr error --name "ANNOTATING" "sed did exit $? while annotating $source to $intermediate" >&2
 
