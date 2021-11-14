@@ -274,6 +274,38 @@ set -- "${args[@]}"
 diag() {
   local opt flag arg
   echo "$0"
+
+  echo "  terminal:"
+    printf "    STDIN: "
+    if [ -t 0 ]; then
+      echo "yes"
+    else
+      echo "no"
+    fi
+    printf "    STDOUT: "
+    if [ -t 1 ]; then
+      echo "yes"
+    else
+      echo "no"
+    fi
+    printf "    STDERR: "
+    if [ -t 2 ]; then
+      echo "yes"
+    else
+      echo "no"
+    fi
+
+  echo "  file descriptors:"
+    if command -v lsof >/dev/null; then
+      lsof -p $$
+    elif command -v fstat >/dev/null; then
+      fstat -p $$
+    elif [ -e /proc ]; then
+      ls -l /proc/$$/fd
+    else
+      echo "Failed to list open file descriptors for process $$"
+    fi
+
   echo "  opts:"
   for opt in "${!opts[@]}"; do
     printf '    --%s=%q\n' "$opt" "${opts[$opt]}"
@@ -287,6 +319,10 @@ diag() {
     printf '    %2d=%q\n' "$arg" "${@:arg:1}"
   done
 }
+
+# TODO
+diag "$@"
+exit
 
 # validate build-dir
 [ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
@@ -326,7 +362,7 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
 # invoke self for each file -> recordr [OPTIONS] base file
 [ $# -eq 2 ] || {
   [ $# -lt 2 ] || [ -e "$HOME/.config/asciinema/install-id" ] || asciinema auth &>/dev/null || {
-    logr warning "defaulting to parallel=1 due to race condition bug in asciinema"
+    logr warning "defaulting to parallel=1 due to race condition bug in asciinema" || true
   }
 
   declare args=()
