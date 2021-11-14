@@ -85,8 +85,6 @@ runs:
   steps:
     - name: ● REC
       id: recordr
-      env:
-        RECORDRW_IMAGE_TAG: edge
       run: |
         set_multiline_output() {
           local name=${1?name missing} && shift

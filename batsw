@@ -217,7 +217,6 @@ bats() {
   set -- "${args[@]}"
 
   local -a opts=()
-  opts+=("-e" "TESTING=1")
   opts+=("-e" "RECORDING=${RECORDING-}")
   opts+=("-e" "TERM=${TERM-}")
   opts+=("-e" "TMPDIR=$PWD/${BATS_TMPDIR%$PWD}")
@@ -230,6 +229,7 @@ bats() {
   opts+=("${wrapper_args[@]}")
   opts+=("--rm")
   opts+=("--name" "$wrapper_name--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
+  opts+=("--env" "TESTING=1")
   opts+=("${BATSW_IMAGE:-bkahlert/batsw:${BATSW_IMAGE_TAG:-latest}}")
 
   local -a bats_opts=()

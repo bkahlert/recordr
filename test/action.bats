@@ -76,6 +76,7 @@ RECORDRW_ARGS
   )
 
   actw \
+    --actw:--env --actw:RECORDRW_IMAGE_TAG=edge \
     --actw:--env --actw:RECORDRW_ARGS="$RECORDRW_ARGS" \
     --bind \
     --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
