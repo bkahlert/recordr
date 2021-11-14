@@ -322,7 +322,6 @@ diag() {
 
 # TODO
 diag "$@"
-exit
 
 # validate build-dir
 [ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
