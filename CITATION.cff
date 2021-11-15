@@ -5,6 +5,6 @@ authors:
     family-names: "Kahlert"
     orcid: "https://orcid.org/0000-0003-1705-4067"
 title: "Recordr — automated terminal session recorder and SVG converter"
-version: 0.1.0
-date-released: 0.1.0
+version: 0.2.0
+date-released: 0.2.0
 url: "https://github.com/bkahlert/recordr"

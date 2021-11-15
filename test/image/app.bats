@@ -15,7 +15,7 @@ teardown() {
   image --stdout-only -i "$BUILD_TAG" --help
   assert_success
   assert_output --partial '
-   ▔▔▔▔▔▔▔ RECORDR 0.1.0
+   ▔▔▔▔▔▔▔ RECORDR 0.2.0
 
    Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]
 

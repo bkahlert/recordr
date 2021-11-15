@@ -25,7 +25,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-export RECORDR_VERSION=0.1.0
+export RECORDR_VERSION=0.2.0
 source logr.sh
 
 # An associative array of supported terminal profiles.
