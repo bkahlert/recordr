@@ -188,6 +188,11 @@ wget -qO- https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE.
 wget2 -nv -O- https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 ```
 
+### GitHub Action
+
+[![pull request created by GitHub action](docs/action/pull-request.png "Recordr GutHub Action")  
+*Recordr GutHub Action*](.github/workflows/docs.yml)
+
 ## Image Configuration
 
 This image can be configured using the following options of which all but `APP_USER` and `APP_GROUP` exist as both—build argument and environment variable.  
