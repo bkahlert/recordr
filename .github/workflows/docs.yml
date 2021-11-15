@@ -1,6 +1,5 @@
 name: docs
 
-# TODO chafa not complete
 on:
   push:
     branches: ['master']

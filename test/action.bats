@@ -87,8 +87,8 @@ RECORDRW_ARGS
     --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
     "$@"
 }
-# TODO
-@test "Xshould run action" {
+
+@test "should run action" {
   local workflows="$BATS_TEST_TMPDIR/.github/workflows"
   mkdir -p "$workflows"
   cat <<WORKFLOW >"$workflows/act-test.yml"
