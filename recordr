@@ -25,7 +25,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-export RECORDR_VERSION=SNAPSHOT
+export RECORDR_VERSION=0.1.0
 source logr.sh
 
 # An associative array of supported terminal profiles.
@@ -242,19 +242,19 @@ ${margin}      └─${esc_red-}●${esc_reset-} baz.svg    ⬅︎ to SVG conver
       ;;
 
       # flags
-    --delete-build=*)
-      flags['delete-build']=${1#*=} && shift
-      ;;
-    --delete-build)
-      [ "${2-}" = true ] || [ "${2-}" = false ] || set -- "$1" true "${@:2}"
-      flags['delete-build']=$2 && shift 2
-      ;;
     --hide-recording=*)
       flags['hide-recording']=${1#*=} && shift
       ;;
     --hide-recording)
       [ "${2-}" = true ] || [ "${2-}" = false ] || set -- "$1" true "${@:2}"
       flags['hide-recording']=$2 && shift 2
+      ;;
+    --delete-build=*)
+      flags['delete-build']=${1#*=} && shift
+      ;;
+    --delete-build)
+      [ "${2-}" = true ] || [ "${2-}" = false ] || set -- "$1" true "${@:2}"
+      flags['delete-build']=$2 && shift 2
       ;;
 
       # unknown arguments
@@ -319,9 +319,6 @@ diag() {
     printf '    %2d=%q\n' "$arg" "${@:arg:1}"
   done
 }
-
-# TODO
-diag "$@"
 
 # validate build-dir
 [ -d "${opts['build-dir']}" ] || mkdir -p "${opts['build-dir']}" \
@@ -420,9 +417,8 @@ infocmp -T "${opts['term']}" &>/dev/null || logr error --code "$EX_USAGE" 'unkno
       logr warn --name "BATCH PROCESSING" "could not abort ${pids[*]}" >&2
     fi
 
-    trap - EXIT HUP INT QUIT PIPE
-    trap 'exit' TERM
-    kill -TERM "$$"
+    trap - EXIT HUP INT QUIT PIPE TERM
+    kill -TERM $$
   }
 
   trap cleanup EXIT HUP INT QUIT PIPE TERM
@@ -575,9 +571,9 @@ record() {
   export TMPDIR
   (
     if [ "${flags['hide-recording']:-false}" = false ]; then
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file"
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} >&2 2>"$err_file"
     else
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} 2>"$err_file" >/dev/null
+      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} >/dev/null 2>"$err_file"
     fi
   ) || {
     local asciinema_status=$? name="RECORDING" err_message indent

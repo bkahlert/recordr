@@ -41,11 +41,11 @@ inputs:
     description: 'Maximum number of conversions that run at once; 0 will run as many conversions as possible'
     required: false
     default: auto
-  delete-build:
+  hide-recording:
     description: 'Whether to hide the recording process'
     required: false
     default: 'false'
-  hide-recording:
+  delete-build:
     description: 'Whether to delete intermediary build files on completion'
     required: false
     default: 'false'
@@ -94,38 +94,6 @@ runs:
           value="${value//$'\r'/'%0D'}"
           echo ::set-output name="$name"::"$value"
         }
-
-
-        echo "  action.yml:"
-        printf "    STDIN: "
-        if [ -t 0 ]; then
-          echo "yes"
-        else
-        echo "no"
-        fi
-        printf "    STDOUT: "
-        if [ -t 1 ]; then
-          echo "yes"
-        else
-        echo "no"
-        fi
-        printf "    STDERR: "
-        if [ -t 2 ]; then
-          echo "yes"
-        else
-        echo "no"
-        fi
-
-        echo "  file descriptors:"
-        if command -v lsof >/dev/null; then
-        lsof -p $$
-        elif command -v fstat >/dev/null; then
-        fstat -p $$
-        elif [ -e /proc ]; then
-        ls -l /proc/$$/fd
-        else
-        echo "Failed to list open file descriptors for process $$"
-        fi
 
         declare -a input_files=()
         while read -r input_file; do

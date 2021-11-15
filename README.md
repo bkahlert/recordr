@@ -300,7 +300,4 @@ Thanks again for your support, it is much appreciated! :pray:
 MIT. See [LICENSE](LICENSE) for more details.
 
 ## TODO
-
-- [ ] parametrize version
-- [ ] auto-build recording with workflow / GitHub Action
 - [ ] add support for dim and italic
