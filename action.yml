@@ -1,6 +1,6 @@
-name: 'Convert terminal sessions to SVG'
+name: '● REC'
 author: 'Björn Kahlert'
-description: 'Record ● rec files as terminal sessions and convert them to SVG'
+description: 'Record terminal sessions and convert them to SVG'
 branding:
   icon: 'circle'
   color: 'red'
