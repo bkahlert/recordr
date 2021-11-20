@@ -189,6 +189,51 @@ wget2 -nv -O- https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [F
 
 ### GitHub Action
 
+Recordr can also be used to automatically convert your terminal sessions to SVG files as part of your workflow.
+
+The example below demonstrates how Recordr can be used to create a pull request containing all updated SVG files and 
+their preview to show up right inside the pull request's description.  
+
+#### Usage Example
+
+```yml
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare
+        id: prep
+        run: |
+          echo ::set-output name=recordr_branch::"${{ github.ref_name }}--docs"
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: ● REC terminal sessions
+        if: github.event_name != 'pull_request'
+        id: recordr
+        uses: bkahlert/recordr@v0.2
+        with:
+          branch: ${{ steps.prep.outputs.recordr_branch }}
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v3
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          commit-message: |
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
+          title: |
+            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
+          body: |
+            Updates ${{ steps.recordr.outputs.file-list }}
+            ${{ steps.recordr.outputs.markdown }}
+          labels: recordr,docs,rec
+          branch: ${{ steps.prep.outputs.recordr_branch }}
+```
+
+All [described options](#usage) can be used to customize the conversion. Please consult [action.yml](action.yml) for detailed information. 
+
 [![pull request created by GitHub action](docs/action/pull-request.png "Recordr GutHub Action")  
 *Recordr GutHub Action*](.github/workflows/docs.yml)
 

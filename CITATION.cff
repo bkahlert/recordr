@@ -5,6 +5,6 @@ authors:
     family-names: "Kahlert"
     orcid: "https://orcid.org/0000-0003-1705-4067"
 title: "Recordr — record terminal sessions and convert them to SVG"
-version: 0.2.0
-date-released: 0.2.0
+version: 0.2.1
+date-released: 2021-11-20
 url: "https://github.com/bkahlert/recordr"

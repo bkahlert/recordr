@@ -104,7 +104,7 @@ runs:
 
         declare output_files
         output_files=$(
-          ./recordrw \
+          curl -LfsS https://git.io/recordrw | "$SHELL" -s -- \
             --build-dir=${{ inputs.build-dir }} \
             --out-dir=${{ inputs.out-dir }} \
             --term=${{ inputs.term }} \
