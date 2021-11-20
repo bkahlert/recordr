@@ -2,8 +2,7 @@
 
 ## About
 
-**Recordr** is an automated terminal session recorder and SVG converter which, by default, records and converts all <span style="color:#c21e73">● rec</span>
-files located at `./rec` and puts them in `./docs`.
+**Recordr** lets you record terminal sessions and convert them to SVG.
 
 [![recorded terminal session demonstrating the recordr tool](docs/demo.svg "Recordr Demo")  
 *Recordr Demo*](../../raw/master/docs/demo.svg)
