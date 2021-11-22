@@ -23,7 +23,8 @@ jobs:
       - name: Prepare
         id: prep
         run: |
-          echo ::set-output name=recordr_branch::"${{ github.ref_name }}--docs"
+          echo ::set-output name=recordr-branch::"${{ github.ref_name }}--docs"
+          echo ::set-output name=recordr-build-dir::"build/
 
       - name: Checkout
         uses: actions/checkout@v2
@@ -33,7 +34,17 @@ jobs:
         id: recordr
         uses: ./
         with:
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          branch: ${{ steps.prep.outputs.recordr-branch }}
+          build-dir: ${{ steps.prep.outputs.recordr-build-dir }}
+
+      - name: Upload ● REC artifacts
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        id: recordr-artifacts
+        with:
+          name: rec-artifacts
+          if-no-files-found: error
+          path: ${{ steps.prep.outputs.recordr-build-dir }}
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
@@ -47,4 +58,4 @@ jobs:
             Updates ${{ steps.recordr.outputs.file-list }}
             ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          branch: ${{ steps.prep.outputs.recordr-branch }}

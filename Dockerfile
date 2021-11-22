@@ -1,6 +1,7 @@
 FROM docker:20.10.11-alpine3.14
 
 # build time only options
+ARG LOGR_VERSION=0.6.0
 ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
 
@@ -37,8 +38,8 @@ RUN chmod +x \
     /usr/local/bin/recordr \
  && sed -Ei -e "s/([[:space:]]app_user=)[^[:space:]]*/\1$APP_USER/" \
             -e "s/([[:space:]]app_group=)[^[:space:]]*/\1$APP_GROUP/" \
-             /usr/local/sbin/entrypoint.sh
-#&& curl -LfsSo /usr/local/bin/recordr.sh https://raw.githubusercontent.com/bkahlert/recordr/master/recordr.sh
+             /usr/local/sbin/entrypoint.sh \
+ && curl -LfsSo /usr/local/bin/recordr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh
 
 # env setup
 ENV DEBUG="$DEBUG" \

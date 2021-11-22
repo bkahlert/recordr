@@ -1,4 +1,4 @@
-# bkahlert/recordr [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/recordr/build?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/recordr/actions/workflows/build-and-publish.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/recordr?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/recordr) [![Repository Size](https://img.shields.io/github/license/bkahlert/recordr?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/recordr/blob/master/LICENSE)
+# bkahlert/recordr [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/recordr/build?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/recordr/actions/workflows/build.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/recordr?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/recordr) [![Repository Size](https://img.shields.io/github/license/bkahlert/recordr?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/recordr/blob/master/LICENSE)
 
 ## About
 
@@ -205,7 +205,7 @@ jobs:
       - name: Prepare
         id: prep
         run: |
-          echo ::set-output name=recordr_branch::"${{ github.ref_name }}--docs"
+          echo ::set-output name=recordr-branch::"${{ github.ref_name }}--docs"
 
       - name: Checkout
         uses: actions/checkout@v2
@@ -215,7 +215,7 @@ jobs:
         id: recordr
         uses: bkahlert/recordr@v0.2
         with:
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          branch: ${{ steps.prep.outputs.recordr-branch }}
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
@@ -229,7 +229,7 @@ jobs:
             Updates ${{ steps.recordr.outputs.file-list }}
             ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          branch: ${{ steps.prep.outputs.recordr-branch }}
 ```
 
 All [described options](#usage) can be used to customize the conversion. Please consult [action.yml](action.yml) for detailed information. 
