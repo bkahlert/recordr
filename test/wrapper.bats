@@ -1,17 +1,11 @@
 #!/usr/bin/env bats
 
 setup() {
-  load helpers/common.sh
-  load_lib support
-  load_lib assert
-  load_lib file
-
   load helpers/mock.sh
   load helpers/svg.sh
 
-  cd "$BATS_TEST_TMPDIR" || exit
-  cp "$BATS_CWD/logr.sh" .
-  mkdir -p rec/bar
+  cp "$BATS_CWD/logr.sh" "$BATS_TEST_TMPDIR"
+  mkdir -p "${BATS_TEST_TMPDIR%/}/rec/bar"
 
   export RECORDRW_ARGS
   RECORDRW_ARGS=$(cat <<RECORDRW_ARGS

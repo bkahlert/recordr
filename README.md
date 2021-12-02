@@ -213,7 +213,7 @@ jobs:
       - name: ● REC terminal sessions
         if: github.event_name != 'pull_request'
         id: recordr
-        uses: bkahlert/recordr@v0.2
+        uses: bkahlert/recordr@v0.2.1
         with:
           branch: ${{ steps.prep.outputs.recordr-branch }}
 
@@ -234,8 +234,8 @@ jobs:
 
 All [described options](#usage) can be used to customize the conversion. Please consult [action.yml](action.yml) for detailed information. 
 
-[![pull request created by GitHub action](docs/action/pull-request.png "Recordr GutHub Action")  
-*Recordr GutHub Action*](.github/workflows/docs.yml)
+[![pull request created by GitHub action](docs/action/pull-request.png "Recordr GitHub Action")  
+*Recordr GitHub Action*](.github/workflows/docs.yml)
 
 ## Image Configuration
 
@@ -243,8 +243,8 @@ This image can be configured using the following options of which all but `APP_U
 You should go for build arguments if you want to set custom defaults you don't intend to change (often). Environment variables will overrule any existing
 configuration on each container start.
 
-- `APP_USER` Name of the main user (default: recordr).
-- `APP_GROUP` Name of the main user's group (default: recordr).
+- `APP_USER` Name of the main user (default: `recordr`).
+- `APP_GROUP` Name of the main user's group (default: `recordr`).
 - `DEBUG` Whether to log debug information (default: `0`)
 - `TZ` Timezone the container runs in (default: `UTC`)
 - `LANG` Language/locale to use (default: `C.UTF-8`)
@@ -305,9 +305,8 @@ git clone https://github.com/bkahlert/recordr.git
 cd recordr
 
 # Use Bats wrapper to run tests
-chmod +x ./batsw
-DOCKER_BAKE="--set *.tags=test" \
-  ./batsw test
+curl -LfsS https://git.io/batsw \
+  | DOCKER_BAKE="--set '*.tags=test'" "$SHELL" -s -- --batsw:-e --batsw:BUILD_TAG=test test
 ```
 
 [Bats Wrapper](https://github.com/bkahlert/bats-wrapper) is a self-contained wrapper to run tests based on the Bash testing

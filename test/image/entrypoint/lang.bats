@@ -1,13 +1,5 @@
 #!/usr/bin/env bats
 
-setup() {
-  load ../helpers/setup.sh
-}
-
-teardown() {
-  image_cleanup
-}
-
 @test "should change LANG to C.UTF-8 by default" {
   mkdir rec && echo 'echo "> $LANG <"' >rec/test.rec
   image "$BUILD_TAG" rec/test.rec

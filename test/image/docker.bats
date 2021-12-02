@@ -1,14 +1,6 @@
 #!/usr/bin/env bats
 # bashsupport disable=BP5007
 
-setup() {
-  load helpers/setup.sh
-}
-
-teardown() {
-  image_cleanup
-}
-
 @test "should provide Docker client" {
   mkdir rec && echo "docker --version" >rec/test.rec
   image "$BUILD_TAG" rec/test.rec

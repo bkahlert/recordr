@@ -2,12 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
-  load ../helpers/setup.sh
   export EX_DATAERR=65
-}
-
-teardown() {
-  image_cleanup
 }
 
 @test "should print output to STDOUT" {

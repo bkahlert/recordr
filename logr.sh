@@ -29,36 +29,36 @@ set -o nounset
 set -o pipefail
 set -o errtrace
 
-declare -r -g EX_OK=0
-declare -r -g EX_GENERAL=1
-declare -r -g EX_NEG_USR_RESP=10
+[ "${EX_OK-}" ] || declare -r -g EX_OK=0
+[ "${EX_GENERAL-}" ] || declare -r -g EX_GENERAL=1
+[ "${EX_NEG_USR_RESP-}" ] || declare -r -g EX_NEG_USR_RESP=10
 # see https://man.openbsd.org/sysexits.3
-declare -r -g EX_USAGE=64       # command line usage error
-declare -r -g EX_DATAERR=65     # data format error
-declare -r -g EX_NOINPUT=66     # cannot open input
-declare -r -g EX_NOUSER=67      # addressee unknown
-declare -r -g EX_NOHOST=68      # host name unknown
-declare -r -g EX_UNAVAILABLE=69 # service unavailable
-declare -r -g EX_SOFTWARE=70    # internal software error
-declare -r -g EX_OSERR=71       # system error (e.g., can't fork)
-declare -r -g EX_OSFILE=72      # critical OS file missing
-declare -r -g EX_CANTCREAT=73   # can't create (user) output file
-declare -r -g EX_IOERR=74       # input/output error
-declare -r -g EX_TEMPFAIL=75    # temp failure; user is invited to retry
-declare -r -g EX_PROTOCOL=76    # remote error in protocol
-declare -r -g EX_NOPERM=77      # permission denied
-declare -r -g EX_CONFIG=78      # configuration error
+[ "${EX_USAGE-}" ] || declare -r -g EX_USAGE=64             # command line usage error
+[ "${EX_DATAERR-}" ] || declare -r -g EX_DATAERR=65         # data format error
+[ "${EX_NOINPUT-}" ] || declare -r -g EX_NOINPUT=66         # cannot open input
+[ "${EX_NOUSER-}" ] || declare -r -g EX_NOUSER=67           # addressee unknown
+[ "${EX_NOHOST-}" ] || declare -r -g EX_NOHOST=68           # host name unknown
+[ "${EX_UNAVAILABLE-}" ] || declare -r -g EX_UNAVAILABLE=69 # service unavailable
+[ "${EX_SOFTWARE-}" ] || declare -r -g EX_SOFTWARE=70       # internal software error
+[ "${EX_OSERR-}" ] || declare -r -g EX_OSERR=71             # system error (e.g., can't fork)
+[ "${EX_OSFILE-}" ] || declare -r -g EX_OSFILE=72           # critical OS file missing
+[ "${EX_CANTCREAT-}" ] || declare -r -g EX_CANTCREAT=73     # can't create (user) output file
+[ "${EX_IOERR-}" ] || declare -r -g EX_IOERR=74             # input/output error
+[ "${EX_TEMPFAIL-}" ] || declare -r -g EX_TEMPFAIL=75       # temp failure; user is invited to retry
+[ "${EX_PROTOCOL-}" ] || declare -r -g EX_PROTOCOL=76       # remote error in protocol
+[ "${EX_NOPERM-}" ] || declare -r -g EX_NOPERM=77           # permission denied
+[ "${EX_CONFIG-}" ] || declare -r -g EX_CONFIG=78           # configuration error
 
-declare -r -g TMPDIR=${TMPDIR:-/tmp}
-declare -r -g LOGR_VERSION=0.6.0
-declare -r -g BANR_CHAR=▔
-declare -r -g MARGIN='   '
-declare -r -g LF=$'\n'
-declare -r -g ESC=$'\x1B'
-declare -r -g ESC_CSI="$ESC"'['  # control sequence intro
-declare -r -g ESC_OSC="$ESC"']'  # operating system command
-declare -r -g ESC_ST="\e\\\\" # string terminator
-declare -a -r -g ESC_PATTERNS=(
+[ "${TMPDIR-}" ] || declare -r -g TMPDIR=${TMPDIR:-/tmp}
+[ "${LOGR_VERSION-}" ] || declare -r -g LOGR_VERSION=0.6.1
+[ "${BANR_CHAR-}" ] || declare -r -g BANR_CHAR=▔
+[ "${MARGIN-}" ] || declare -r -g MARGIN='   '
+[ "${LF-}" ] || declare -r -g LF=$'\n'
+[ "${ESC-}" ] || declare -r -g ESC=$'\x1B'
+[ "${ESC_CSI-}" ] || declare -r -g ESC_CSI="$ESC"'['  # control sequence intro
+[ "${ESC_OSC-}" ] || declare -r -g ESC_OSC="$ESC"']'  # operating system command
+[ "${ESC_ST-}" ] || declare -r -g ESC_ST="\e\\\\" # string terminator
+[ "${ESC_PATTERNS-}" ] || declare -r -a -g ESC_PATTERNS=(
   's|'"$ESC_OSC"'[[:digit:]]*\;[^'"$ESC"']*'"$ESC"'\\||g;' # OSC escape sequences
   's|'"$ESC"'[@-Z\\-_]||g;' # Fe escape sequences
   's|'"$ESC"'[ -/][@-~]||g;' # 2-byte sequences
@@ -661,6 +661,8 @@ logr() {
       ;;
     _init)
       shift
+      [ -e "$TMPDIR" ] || mkdir -p "$TMPDIR" || die "'$TMPDIR' could not be created"
+
       # Registers signal_handler to run when the shell receives one of the specified signals.
       handle() {
         [ ! "${_Dbg_DEBUGGER_LEVEL-}" ] || return 0
@@ -942,17 +944,21 @@ logr() {
           # error
           {
             util reprint --icon error "$(cat "$task_file")"
+            [ ! -e "$task_file" ] || rm -- "$task_file"
             sed \
               -e "$ESC_PATTERN" \
               -e 's/^/'"$MARGIN${esc_red-}"'/;' \
               -e 's/$/'"${esc_reset-}"'/;' \
               "$log_file"
+            [ ! -e "$log_file" ] || rm -- "$log_file"
             logr cleanup
             exit $task_exit_status
           } >&2
         else
           # success
           # erase what has been printed on same line by printing task_line again
+          [ ! -e "$task_file" ] || rm -- "$task_file"
+          [ ! -e "$log_file" ] || rm -- "$log_file"
           util reprint --icon success "$logr_tasks"
         fi
       fi
@@ -1072,7 +1078,7 @@ main() {
 
   local r=${esc_reset-}
   # bashsupport disable=BP5006
-  declare -A -g -r ICONS=(
+  [ "${ICONS-}" ] || declare -A -g ICONS=(
     ['created']="${esc_yellow-}✱$r"
     ['added']="${esc_green-}✚$r"
     ['item']="${esc_bright_black-}▪$r"
@@ -1091,7 +1097,7 @@ main() {
   declare -g logr_parent_tasks=''
 
   # bashsupport disable=BP5006
-  declare -A -g -r -x ICON_ALIASES=(
+  [ "${ICON_ALIASES-}" ] || declare -A -g -x ICON_ALIASES=(
     ['creation']="created"
     ['create']="created"
     ['new']="created"

@@ -8,7 +8,7 @@
 
 ### Changed
 
-*none*
+- use [Bats Wrapper GitHub action](https://github.com/marketplace/actions/bats-wrapper)
 
 ### Deprecated
 
@@ -20,7 +20,7 @@
 
 ### Fixed
 
-*none*
+- support `--recordrw:` style arguments also if script is downloaded and executed directly
 
 ## [0.2.1] - 2021-11-20
 

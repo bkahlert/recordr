@@ -2,17 +2,6 @@
 
 set -uo pipefail
 
-if [ -f "$BATS_TEST_DIRNAME/../helpers/common.sh" ]; then
-  load "$BATS_TEST_DIRNAME/../helpers/common.sh"
-else
-  load "$BATS_TEST_DIRNAME/../../helpers/common.sh"
-fi
-
-load_lib support
-load_lib assert
-load_lib file
-
-cd "$BATS_TEST_TMPDIR" || exit 1
 [ "${BUILD_TAG-}" ] || fail "unspecified image to test"
 
 export IMAGE_PUID="id -u"
@@ -62,6 +51,6 @@ image() {
 }
 
 # Cleans up an eventually still running container.
-image_cleanup() {
+teardown() {
   docker rm --force "${BATS_TEST_NAME?must be only called from within a running test}" >/dev/null 2>&1 || true
 }

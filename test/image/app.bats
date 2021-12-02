@@ -2,12 +2,7 @@
 # bashsupport disable=BP5007
 
 setup() {
-  load helpers/setup.sh
   load ../helpers/svg.sh
-}
-
-teardown() {
-  image_cleanup
 }
 
 @test "should print help if specified" {

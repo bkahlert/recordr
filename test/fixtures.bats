@@ -1,13 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  load helpers/common.sh
-  load_lib support
-  load_lib assert
-
   load helpers/mock.sh
-
-  cd "$BATS_TEST_DIRNAME" || exit
 }
 
 # Creates shell script that runs the specified rec file.
@@ -75,6 +69,8 @@ recording() {
 }
 
 @test "should have working chafa.rec" {
+  cd "$BATS_CWD/rec"
+
   TERM=xterm run bash "$(recording "chafa.rec")"
 
   assert_success

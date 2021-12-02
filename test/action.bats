@@ -1,11 +1,6 @@
 #!/usr/bin/env bats
 
 setup() {
-  load helpers/common.sh
-  load_lib support
-  load_lib assert
-  load_lib file
-
   load helpers/mock.sh
   load helpers/svg.sh
 
@@ -14,9 +9,8 @@ setup() {
   cp -R recordr "$BATS_TEST_TMPDIR"
   cp -R recordrw "$BATS_TEST_TMPDIR"
   cp -R .git "$BATS_TEST_TMPDIR"
-  cd "$BATS_TEST_TMPDIR" || exit
-  mkdir -p rec
-  copy_fixture test.rec rec/hello-world.rec
+  mkdir -p "${BATS_TEST_TMPDIR%/}/rec"
+  copy_fixture test.rec "${BATS_TEST_TMPDIR%/}/rec/hello-world.rec"
 }
 
 teardown() {
@@ -72,6 +66,8 @@ act() {
   export RECORDRW_ARGS
   RECORDRW_ARGS=$(
     cat <<RECORDRW_ARGS
+-e PUID="$(id -u)" \
+-e PGID="$(id -g)" \
 -v "$PWD/recordr":/usr/local/bin/recordr \
 -v "$PWD/logr.sh":/usr/local/bin/logr.sh
 RECORDRW_ARGS

@@ -2,14 +2,9 @@
 # bashsupport disable=BP5007
 
 setup() {
-  load ../helpers/setup.sh
   declare -r -g pattern='> %d <\n'
   declare -r -g puid='$(id -u)'
   declare -r -g pgid='$(id -g)'
-}
-
-teardown() {
-  image_cleanup
 }
 
 @test "should persist APP_USER and APP_GROUP in entrypoint.sh" {

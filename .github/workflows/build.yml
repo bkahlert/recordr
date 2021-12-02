@@ -71,7 +71,7 @@ jobs:
         run: |
           echo ::set-output name=build_tag::test
           echo ::set-output name=test_dir::test
-          echo ::set-output name=test_reports_dir::build/test-reports
+          echo ::set-output name=test_reports_dir::build/bats-tmp/test-reports
           echo ::set-output name=test_reports_format::junit
 
       - name: Build test
@@ -82,12 +82,13 @@ jobs:
           DEFAULT_TAG: ${{ steps.prep.outputs.build_tag }}
 
       - name: Run tests
-        run: |
-          chmod +x batsw
-          ./batsw "${{ steps.prep.outputs.test_dir }}" \
-            --batsw:--env --batsw:BUILD_TAG="${{ steps.prep.outputs.build_tag }}" \
-            --report-formatter "${{ steps.prep.outputs.test_reports_format }}" \
-            --output "${{ steps.prep.outputs.test_reports_dir }}"
+        uses: bkahlert/bats-wrapper@v0.1.2
+        env:
+          BATSW_ARGS: --env BUILD_TAG="${{ steps.prep.outputs.build_tag }}"
+        with:
+          report-formatter: ${{ steps.prep.outputs.test_reports_format }}
+          output: ${{ steps.prep.outputs.test_reports_dir }}
+          tests: ${{ steps.prep.outputs.test_dir }}
 
       - name: Upload test reports
         uses: actions/upload-artifact@v2

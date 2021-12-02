@@ -28,7 +28,7 @@
 # Usage: curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 # Local: ./recordrw --recordrw:-v --recordrw:"$PWD/recordr":/usr/local/bin/recordr --recordrw:-v --recordrw:"$PWD/logr.sh":/usr/local/bin/logr.sh [OPTIONS] [DIR[/ ]FILE [FILE...]]
 
-declare wrapper_name=${0##*/}
+declare wrapper_name=recordrw
 declare -a args=() wrapper_args=()
 while (($#)); do
   case $1 in

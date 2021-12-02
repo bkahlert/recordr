@@ -24,7 +24,7 @@ jobs:
         id: prep
         run: |
           echo ::set-output name=recordr-branch::"${{ github.ref_name }}--docs"
-          echo ::set-output name=recordr-build-dir::"build/
+          echo ::set-output name=recordr-build-dir::"build/rec"
 
       - name: Checkout
         uses: actions/checkout@v2

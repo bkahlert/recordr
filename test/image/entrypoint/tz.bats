@@ -1,13 +1,5 @@
 #!/usr/bin/env bats
 
-setup() {
-  load ../helpers/setup.sh
-}
-
-teardown() {
-  image_cleanup
-}
-
 @test "should change timezone to UTC by default" {
   mkdir rec && echo 'date +"%Z"' >rec/test.rec
   image "$BUILD_TAG" rec/test.rec
