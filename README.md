@@ -213,7 +213,7 @@ jobs:
       - name: ● REC terminal sessions
         if: github.event_name != 'pull_request'
         id: recordr
-        uses: bkahlert/recordr@v0.2.1
+        uses: bkahlert/recordr@v0.2.2
         with:
           branch: ${{ steps.prep.outputs.recordr-branch }}
 
@@ -243,8 +243,8 @@ This image can be configured using the following options of which all but `APP_U
 You should go for build arguments if you want to set custom defaults you don't intend to change (often). Environment variables will overrule any existing
 configuration on each container start.
 
-- `APP_USER` Name of the main user (default: `recordr`).
-- `APP_GROUP` Name of the main user's group (default: `recordr`).
+- `APP_USER` Name of the main user (default: `recordr`)
+- `APP_GROUP` Name of the main user's group (default: `recordr`)
 - `DEBUG` Whether to log debug information (default: `0`)
 - `TZ` Timezone the container runs in (default: `UTC`)
 - `LANG` Language/locale to use (default: `C.UTF-8`)

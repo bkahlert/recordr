@@ -10,7 +10,7 @@ setup() {
   image --stdout-only -i "$BUILD_TAG" --help
   assert_success
   assert_output --partial '
-   ▔▔▔▔▔▔▔ RECORDR 0.2.1
+   ▔▔▔▔▔▔▔ RECORDR 0.2.2
 
    Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]
 

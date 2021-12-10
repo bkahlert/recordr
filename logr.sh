@@ -25,47 +25,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set -o nounset
-set -o pipefail
-set -o errtrace
-
-[ "${EX_OK-}" ] || declare -r -g EX_OK=0
-[ "${EX_GENERAL-}" ] || declare -r -g EX_GENERAL=1
-[ "${EX_NEG_USR_RESP-}" ] || declare -r -g EX_NEG_USR_RESP=10
-# see https://man.openbsd.org/sysexits.3
-[ "${EX_USAGE-}" ] || declare -r -g EX_USAGE=64             # command line usage error
-[ "${EX_DATAERR-}" ] || declare -r -g EX_DATAERR=65         # data format error
-[ "${EX_NOINPUT-}" ] || declare -r -g EX_NOINPUT=66         # cannot open input
-[ "${EX_NOUSER-}" ] || declare -r -g EX_NOUSER=67           # addressee unknown
-[ "${EX_NOHOST-}" ] || declare -r -g EX_NOHOST=68           # host name unknown
-[ "${EX_UNAVAILABLE-}" ] || declare -r -g EX_UNAVAILABLE=69 # service unavailable
-[ "${EX_SOFTWARE-}" ] || declare -r -g EX_SOFTWARE=70       # internal software error
-[ "${EX_OSERR-}" ] || declare -r -g EX_OSERR=71             # system error (e.g., can't fork)
-[ "${EX_OSFILE-}" ] || declare -r -g EX_OSFILE=72           # critical OS file missing
-[ "${EX_CANTCREAT-}" ] || declare -r -g EX_CANTCREAT=73     # can't create (user) output file
-[ "${EX_IOERR-}" ] || declare -r -g EX_IOERR=74             # input/output error
-[ "${EX_TEMPFAIL-}" ] || declare -r -g EX_TEMPFAIL=75       # temp failure; user is invited to retry
-[ "${EX_PROTOCOL-}" ] || declare -r -g EX_PROTOCOL=76       # remote error in protocol
-[ "${EX_NOPERM-}" ] || declare -r -g EX_NOPERM=77           # permission denied
-[ "${EX_CONFIG-}" ] || declare -r -g EX_CONFIG=78           # configuration error
-
-[ "${TMPDIR-}" ] || declare -r -g TMPDIR=${TMPDIR:-/tmp}
-[ "${LOGR_VERSION-}" ] || declare -r -g LOGR_VERSION=0.6.1
-[ "${BANR_CHAR-}" ] || declare -r -g BANR_CHAR=▔
-[ "${MARGIN-}" ] || declare -r -g MARGIN='   '
-[ "${LF-}" ] || declare -r -g LF=$'\n'
-[ "${ESC-}" ] || declare -r -g ESC=$'\x1B'
-[ "${ESC_CSI-}" ] || declare -r -g ESC_CSI="$ESC"'['  # control sequence intro
-[ "${ESC_OSC-}" ] || declare -r -g ESC_OSC="$ESC"']'  # operating system command
-[ "${ESC_ST-}" ] || declare -r -g ESC_ST="\e\\\\" # string terminator
-[ "${ESC_PATTERNS-}" ] || declare -r -a -g ESC_PATTERNS=(
-  's|'"$ESC_OSC"'[[:digit:]]*\;[^'"$ESC"']*'"$ESC"'\\||g;' # OSC escape sequences
-  's|'"$ESC"'[@-Z\\-_]||g;' # Fe escape sequences
-  's|'"$ESC"'[ -/][@-~]||g;' # 2-byte sequences
-  's|'"$ESC_CSI"'[0-?]*[ -/]*[@-~]||g;' # CSI escape sequences
-)
-printf -v ESC_PATTERN '%s' "${ESC_PATTERNS[@]}"
-
 (return 2>/dev/null) || set -- "$@" "-!-"
 
 # bashsupport disable=BP2001
@@ -186,8 +145,8 @@ util() {
       args=() cleansed=() usage="${usage%UTIL*}$1 FORMAT [ARGS...]"
       shift
       [ $# -gt 0 ] || logr error "format missing" --usage "$usage" --stacktrace -- "$@"
-      for text in "${@}" ; do
-          cleansed+=("$(echo "$text" | sed "$ESC_PATTERN")")
+      for text in "${@}"; do
+        cleansed+=("$(echo "$text" | sed "$ESC_PATTERN")")
       done
       # shellcheck disable=SC2059
       printf -v util_text "${cleansed[@]}"
@@ -623,7 +582,7 @@ headr() {
 #   1 - error
 #   * - signal
 logr() {
-  local inv=("$@") args=() code=${LOGR_ALIAS_CODE:-$?} usage="[-i | --inline] COMMAND [ARGS...]" exit inline
+  local inv=("$@") args=() code=${LOGR_ALIAS_CODE:-$?} usage="[-i | --inline] COMMAND [ARGS...]" inline
   while (($#)); do
     case $1 in
       -i | --inline)
@@ -667,7 +626,7 @@ logr() {
       handle() {
         [ ! "${_Dbg_DEBUGGER_LEVEL-}" ] || return 0
         local args=('$?' '"${BASH_COMMAND:-?}"' '"${FUNCNAME[0]:-main}(${BASH_SOURCE[0]:-?}:${LINENO:-?})"')
-        for signal in "$@" ; do
+        for signal in "$@"; do
           trap 'signal_handler '"$signal ${args[*]}" "$signal" || die "Failed to set trap for $signal"
         done
       }
@@ -676,14 +635,14 @@ logr() {
         local signal="$1" status="$2" command="$3" location="$4"
         logr cleanup
         case $signal in
-        EXIT)
-          return 0
-          ;;
-        ERR)
-          [ "${status:-1}" -ne 0 ] || return 0
-          status="${esc_red-}${status:-?} ${ICONS['exit']}${esc_reset-}"
-          logr fatal --name "${0##*/}" "%s %s\n     %s %s" "$status" "$command" 'at' "$location"
-          ;;
+          EXIT)
+            return 0
+            ;;
+          ERR)
+            [ "${status:-1}" -ne 0 ] || return 0
+            status="${esc_red-}${status:-?} ${ICONS['exit']}${esc_reset-}"
+            logr fatal --name "${0##*/}" "%s %s\n     %s %s" "$status" "$command" 'at' "$location"
+            ;;
         esac
 
         trap - EXIT HUP INT QUIT PIPE TERM
@@ -707,15 +666,15 @@ logr() {
       echo "$_rs"
       ;;
 
-    # TODO
-#    EX_*)
-#      local
-#       Parses this script for a line documenting the parameter and returns the comment.
-#      describe() { sed -En "/declare -r -g $1=.*#/p" "${BASH_SOURCE[0]}" | sed -E 's/[^#]*#[[:space:]]*(.*)$/\1/g'; }
-#
-#      local err_message=$(describe $1)
-#      logr error --code "$1" "$2 is missing a value -- $err_message" --usage "$usage" -- "${@}"
-#      ;;
+      # TODO
+      #    EX_*)
+      #      local
+      #       Parses this script for a line documenting the parameter and returns the comment.
+      #      describe() { sed -En "/declare -r -g $1=.*#/p" "${BASH_SOURCE[0]}" | sed -E 's/[^#]*#[[:space:]]*(.*)$/\1/g'; }
+      #
+      #      local err_message=$(describe $1)
+      #      logr error --code "$1" "$2 is missing a value -- $err_message" --usage "$usage" -- "${@}"
+      #      ;;
 
     success | warning | error | failure)
       local command=$1 call_offset=0
@@ -1073,12 +1032,63 @@ tracr() {
 }
 
 # Initializes environment
+# shellcheck disable=SC2034
+# bashsupport disable=BP2001
 main() {
+  [ ! "${LOGR_VERSION-}" ] || return 0
+
+  set -o nounset
+  set -o pipefail
+  set -o errtrace
+
+  declare -r -g EX_OK=0
+  declare -r -g EX_GENERAL=1
+  declare -r -g EX_NEG_USR_RESP=10
+  # see https://man.openbsd.org/sysexits.3
+  declare -r -g EX_USAGE=64       # command line usage error
+  declare -r -g EX_DATAERR=65     # data format error
+  declare -r -g EX_NOINPUT=66     # cannot open input
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_NOUSER=67      # addressee unknown
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_NOHOST=68      # host name unknown
+  declare -r -g EX_UNAVAILABLE=69 # service unavailable
+  declare -r -g EX_SOFTWARE=70    # internal software error
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_OSERR=71       # system error (e.g., can't fork)
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_OSFILE=72      # critical OS file missing
+  declare -r -g EX_CANTCREAT=73   # can't create (user) output file
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_IOERR=74       # input/output error
+  declare -r -g EX_TEMPFAIL=75    # temp failure; user is invited to retry
+  declare -r -g EX_PROTOCOL=76    # remote error in protocol
+  # bashsupport disable=SpellCheckingInspection
+  declare -r -g EX_NOPERM=77      # permission denied
+  declare -r -g EX_CONFIG=78      # configuration error
+
+  declare -r -g TMPDIR=${TMPDIR:-/tmp}
+  declare -r -g LOGR_VERSION=0.6.2
+  declare -r -g BANR_CHAR=▔
+  declare -r -g MARGIN='   '
+  declare -r -g LF=$'\n'
+  declare -r -g ESC=$'\x1B'
+  declare -r -g ESC_CSI="$ESC"'[' # control sequence intro
+  declare -r -g ESC_OSC="$ESC"']' # operating system command
+  declare -r -g ESC_ST="\e\\\\"   # string terminator
+  declare -r -a -g ESC_PATTERNS=(
+    's|'"$ESC_OSC"'[[:digit:]]*\;[^'"$ESC"']*'"$ESC"'\\||g;' # OSC escape sequences
+    's|'"$ESC"'[@-Z\\-_]||g;'                                # Fe escape sequences
+    's|'"$ESC"'[ -/][@-~]||g;'                               # 2-byte sequences
+    's|'"$ESC_CSI"'[0-?]*[ -/]*[@-~]||g;'                    # CSI escape sequences
+  )
+  printf -v ESC_PATTERN '%s' "${ESC_PATTERNS[@]}"
+
   esc --init
 
   local r=${esc_reset-}
   # bashsupport disable=BP5006
-  [ "${ICONS-}" ] || declare -A -g ICONS=(
+  declare -A -g ICONS=(
     ['created']="${esc_yellow-}✱$r"
     ['added']="${esc_green-}✚$r"
     ['item']="${esc_bright_black-}▪$r"
@@ -1097,7 +1107,7 @@ main() {
   declare -g logr_parent_tasks=''
 
   # bashsupport disable=BP5006
-  [ "${ICON_ALIASES-}" ] || declare -A -g -x ICON_ALIASES=(
+  declare -A -g -x ICON_ALIASES=(
     ['creation']="created"
     ['create']="created"
     ['new']="created"

@@ -20,6 +20,14 @@
 
 ### Fixed
 
+*none*
+
+## [0.2.2] - 2021-12-10
+
+### Fixed
+
+- set valid `$SHELL` for app user
+
 - support `--recordrw:` style arguments also if script is downloaded and executed directly
 
 ## [0.2.1] - 2021-11-20
@@ -44,10 +52,12 @@
 
 - `recordr` Bash script and Docker image that enables you to record scripted terminal sessions and convert them to SVG in a single step.
 
-[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.2...HEAD
 
-[0.2.1]: https://github.com/bkahlert/recordr/compare/v0.2.1...v0.2.0
+[0.2.2]: https://github.com/bkahlert/recordr/compare/v0.2.1...v0.2.2
 
-[0.2.0]: https://github.com/bkahlert/recordr/compare/v0.2.0...v0.1.0
+[0.2.1]: https://github.com/bkahlert/recordr/compare/v0.2.0...v0.2.1
+
+[0.2.0]: https://github.com/bkahlert/recordr/compare/v0.1.0...v0.2.0
 
 [0.1.0]: https://github.com/bkahlert/recordr/releases/tag/v0.1.0

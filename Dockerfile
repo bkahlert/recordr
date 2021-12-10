@@ -1,7 +1,7 @@
 FROM docker:20.10.11-alpine3.14
 
 # build time only options
-ARG LOGR_VERSION=0.6.1
+ARG LOGR_VERSION=0.6.2
 ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
 
@@ -56,9 +56,8 @@ RUN groupadd \
     --comment "app user" \
     --uid $PUID \
     --gid "$APP_GROUP" \
-    --shell /sbin/nologin \
-    "$APP_USER" \
- && rm -rf /tmp/* /var/lib/apt/list/*
+    --shell /bin/bash \
+    "$APP_USER"
 
 # finalization
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/sbin/entrypoint.sh"]

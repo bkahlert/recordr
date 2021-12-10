@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="recordr: test" type="ShConfigurationType">
     <option name="defaultInterpreter" value="posix" />
-    <option name="SCRIPT_TEXT" value="curl -LfsS https://git.io/batsw | &quot;$SHELL&quot; -s -- test" />
+    <option name="SCRIPT_TEXT" value="curl -LfsS https://git.io/batsw | &quot;$SHELL&quot; -s -- --batsw:-e --batsw:BUILD_TAG=test test" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
     <option name="SCRIPT_PATH" value="$PROJECT_DIR$/../recordr/batsw" />
     <option name="SCRIPT_OPTIONS" value="" />
