@@ -1,4 +1,4 @@
-FROM docker:20.10.11-alpine3.14
+FROM docker:20.10.12-alpine3.14
 
 # build time only options
 ARG LOGR_VERSION=0.6.2
