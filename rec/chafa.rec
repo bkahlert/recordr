@@ -48,18 +48,9 @@ else
     images[$image]="$(cd "${images[$image]%/*}" && pwd)/${images[$image]##*/}"
     mounts+=("-v" "${images[$image]}:${images[$image]}")
   done
-  declare container
-  container=$(
-    docker run \
-      --detach \
-      --name "chafa-$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)" \
-      "${mounts[@]}" \
-      rafib/awesome-cli-binaries \
-      bash -c "while true; do sleep 1; done"
-  )
   # shellcheck disable=SC2064
-  trap "printf %s '$(tput cnorm)'; docker rm --force '$container' &>/dev/null" EXIT
-  chafa=(docker exec --tty --env "TERM=$TERM" "$container" /opt/bin/chafa)
+  trap "printf %s '$(tput cnorm)'" EXIT
+  chafa=(docker run --rm --tty --env "TERM=$TERM" "${mounts[@]}" efrecon/chafa:1.8.0)
 fi
 
 # Prints the specified options.

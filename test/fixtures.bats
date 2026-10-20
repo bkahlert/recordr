@@ -78,15 +78,15 @@ recording() {
     assert_output --partial "$line"
   done < <(
     cat <<'NYAN-CAT'
-i>::::::~iiiiii|::::::.______________,
-_,zzzzzzT______3zzzzz~jMMMMMMMM0MMMMMMf
+i+""""""~iiiiii|"""""".______________,
+_,rrrrrrC______3rrrrr~jMMMMMMMM0MMMMMMf
 00MMM00MM0000000MMM0M'JMMMMMMMM"w_~4MMf._y
-MMMMMMMMMMMMMMMMP'_^MlJMMMMMMMM #Mm____mM0
-&&~~~~~~'&&&&&&Z'\\\_:JMMM0MMM !M0f~M@*0f~m
-my_______mmmmmm_____}:JMWMMMMM !Mm-4#^w}-wM
+MMMMMMMMMMMMMMMMP'_^MlJMMMMMMMM #Mm____wM0
+&&~~~~~~'&&&&&&E'\\\_"JMMM0MMM !M0f~M@*0f~m
+my_______mmmmmm_____}"JMWMMMMM !Mm-4#^w}-wM
 ^^MMMMMMP^^^^^^^M0MMP'JMM0MMMMm,~0_______~
-uTyyyyyy3uuuuuw_'gy~we "~~~~~~~~'     :
-  .......     `~_..,.   ..       .   .
+fC9999993fffffP_'g9~we "~~~~~~~~'     "
+  .......     -~_..,.   ..       .
                  ^ .
 NYAN-CAT
   )
