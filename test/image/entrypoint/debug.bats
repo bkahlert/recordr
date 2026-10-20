@@ -7,7 +7,7 @@ setup() {
 
 @test "should print output to STDOUT" {
   image --stdout-only "$BUILD_TAG" --help
-  assert_line --partial "▔▔▔▔▔▔▔ RECORDR 0.2.2"
+  assert_line --partial "▔▔▔▔▔▔▔ RECORDR 0.2.3"
 }
 
 @test "should not print logs by default" {

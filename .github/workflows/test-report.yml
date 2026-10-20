@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: dorny/test-reporter@v1
+      - uses: dorny/test-reporter@v3.0.0
         with:
           artifact: test-reports
           name: Bats tests

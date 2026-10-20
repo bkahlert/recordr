@@ -1,7 +1,8 @@
-FROM docker:20.10.12-alpine3.14
+FROM docker:29.9.1-alpine3.24
 
 # build time only options
-ARG LOGR_VERSION=0.6.2
+ARG LOGR_VERSION=0.6.3
+ARG SVG_TERM_CLI_VERSION=2.1.1
 ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
 
@@ -26,10 +27,10 @@ RUN apk --no-cache --update add \
     npm \
     sed \
     shadow \
- && npm install -g svg-term-cli
+ && npm install -g "svg-term-cli@${SVG_TERM_CLI_VERSION}"
 
 # app setup
-COPY --from=crazymax/yasu:1.17.0 / /
+COPY --from=crazymax/yasu:1.20.1 / /
 COPY rootfs /
 COPY recordr /usr/local/bin/
 RUN chmod +x \
@@ -61,3 +62,6 @@ RUN groupadd \
 
 # finalization
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/sbin/entrypoint.sh"]
+
+# This image runs a one-shot command rather than a long-lived service.
+HEALTHCHECK NONE
