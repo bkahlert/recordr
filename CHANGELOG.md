@@ -31,6 +31,7 @@
 
 ### Fixed
 
+- write Asciinema recordings as asciicast v2 for svg-term-cli compatibility
 - write GitHub Action outputs through the supported output file
 - skip artifact upload when the docs workflow does not generate files
 

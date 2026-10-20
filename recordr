@@ -559,7 +559,7 @@ record() {
   local err_file="${target%.*}.asciinema"
   rec_to_recordable "$rec_file" "$recordable_file"
 
-  local -a asciinema_args=("rec")
+  local -a asciinema_args=("rec" "--output-format" "asciicast-v2")
   asciinema_args+=("--command" "bash '$recordable_file'")
 
   [ ! "${DEBUG:-0}" = 0 ] || asciinema_args+=("--quiet")

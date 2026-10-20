@@ -23,6 +23,7 @@ RUN apk --no-cache --update add \
     dumb-init \
     docker-cli \
     expect \
+    ncurses \
     nodejs \
     npm \
     sed \
