@@ -27,7 +27,7 @@
 ### Changed
 
 - refresh Docker base image to `29.9.2-alpine3.24`
-- upgrade Logr to the published `v0.6.4` asset
+- upgrade Logr to the published `v0.6.5` asset
 - update the test reporter to `v3.2.0`
 - update documented GitHub Actions pins and output handling
 
