@@ -146,11 +146,11 @@ util() {
       shift
       [ $# -gt 0 ] || logr error "format missing" --usage "$usage" --stacktrace -- "$@"
       for text in "${@}"; do
-        cleansed+=("$(echo "$text" | sed "$ESC_PATTERN")")
+        cleansed+=("$(echo "$text" | LC_ALL=C sed "$ESC_PATTERN")")
       done
       # shellcheck disable=SC2059
       printf -v util_text "${cleansed[@]}"
-      util_text=$(echo "$util_text" | sed -e "$ESC_PATTERN")
+      util_text=$(echo "$util_text" | LC_ALL=C sed -e "$ESC_PATTERN")
       ;;
 
     center)
@@ -1071,7 +1071,7 @@ main() {
   declare -r -g EX_CONFIG=78      # configuration error
 
   declare -r -g TMPDIR=${TMPDIR:-/tmp}
-  declare -r -g LOGR_VERSION=0.6.3
+  declare -r -g LOGR_VERSION=0.6.5
   declare -r -g BANR_CHAR=▔
   declare -r -g MARGIN='   '
   declare -r -g LF=$'\n'
@@ -1101,7 +1101,7 @@ main() {
     ['nested']="${esc_yellow-}❱$r"
     ['exit']="${esc_bold-}${esc_red-}↩$r"
     ['success']="${esc_green-}✔$r"
-    ['info']="${esc_white-}ℹ︎$r"
+    ['info']="${esc_white-}ℹ"$'\xEF\xB8\x8E'"$r"
     ['warning']="${esc_bold-}${esc_yellow-}!$r"
     ['error']="${esc_red-}✘$r"
     ['failure']="${esc_bold-}${esc_red-}ϟ$r"

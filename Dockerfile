@@ -1,7 +1,7 @@
-FROM docker:29.9.1-alpine3.24
+FROM docker:29.9.2-alpine3.24
 
 # build time only options
-ARG LOGR_VERSION=0.6.3
+ARG LOGR_VERSION=0.6.5
 ARG SVG_TERM_CLI_VERSION=2.1.1
 ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
@@ -41,8 +41,7 @@ RUN chmod +x \
  && sed -Ei -e "s/([[:space:]]app_user=)[^[:space:]]*/\1$APP_USER/" \
             -e "s/([[:space:]]app_group=)[^[:space:]]*/\1$APP_GROUP/" \
              /usr/local/sbin/entrypoint.sh \
- && curl -LfsSo /usr/local/bin/logr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh \
- && sed -i 's/ℹ/ℹ︎/g' /usr/local/bin/logr.sh
+ && curl -LfsSo /usr/local/bin/logr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh
 
 # env setup
 ENV DEBUG="$DEBUG" \
