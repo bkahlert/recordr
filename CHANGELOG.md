@@ -8,8 +8,7 @@
 
 ### Changed
 
-- refresh Docker base image to `29.9.2-alpine3.24`
-- update documented GitHub Actions pins and output handling
+*none*
 
 ### Deprecated
 
@@ -22,6 +21,15 @@
 ### Fixed
 
 *none*
+
+## [0.2.4] - 2026-10-21
+
+### Changed
+
+- refresh Docker base image to `29.9.2-alpine3.24`
+- upgrade Logr to the published `v0.6.4` asset
+- update the test reporter to `v3.2.0`
+- update documented GitHub Actions pins and output handling
 
 ## [0.2.3] - 2026-10-21
 
@@ -68,7 +76,9 @@
 
 - `recordr` Bash script and Docker image that enables you to record scripted terminal sessions and convert them to SVG in a single step.
 
-[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.3...HEAD
+[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.4...HEAD
+
+[0.2.4]: https://github.com/bkahlert/recordr/compare/v0.2.3...v0.2.4
 
 [0.2.3]: https://github.com/bkahlert/recordr/compare/v0.2.2...v0.2.3
 

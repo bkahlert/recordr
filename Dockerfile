@@ -41,8 +41,7 @@ RUN chmod +x \
  && sed -Ei -e "s/([[:space:]]app_user=)[^[:space:]]*/\1$APP_USER/" \
             -e "s/([[:space:]]app_group=)[^[:space:]]*/\1$APP_GROUP/" \
              /usr/local/sbin/entrypoint.sh \
- && curl -LfsSo /usr/local/bin/logr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh \
- && sed -i 's/ℹ/ℹ︎/g' /usr/local/bin/logr.sh
+ && curl -LfsSo /usr/local/bin/logr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh
 
 # env setup
 ENV DEBUG="$DEBUG" \
