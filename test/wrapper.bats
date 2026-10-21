@@ -4,6 +4,7 @@ setup() {
   load helpers/mock.sh
   load helpers/svg.sh
 
+  export PATH="$BATS_CWD:$PATH"
   cp "$BATS_CWD/logr.sh" "$BATS_TEST_TMPDIR"
   mkdir -p "${BATS_TEST_TMPDIR%/}/rec/bar"
 
