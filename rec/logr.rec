@@ -27,6 +27,7 @@ lib=$(download "https://git.io/logr.sh")
 trap 'echo " … Cleaning up"; [ ! -e '"$lib"' ] || rm -- '"$lib"'; kill $$' EXIT
 # shellcheck disable=SC1090
 source "$lib"
+ICONS[info]="${esc_white-}ℹ︎${esc_reset-}"
 rec banr "logr demo"
 rec logr info "Lorem ipsum dolor sit amet."
 rec logr task "2 seconds of work" -- sleep 2

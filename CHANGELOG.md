@@ -32,6 +32,8 @@
 ### Fixed
 
 - write Asciinema recordings as asciicast v2 for svg-term-cli compatibility
+- preserve visible recording output and the requested locale with Asciinema 3
+- render the info icon as text rather than emoji
 - write GitHub Action outputs through the supported output file
 - skip artifact upload when the docs workflow does not generate files
 

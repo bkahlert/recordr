@@ -2,6 +2,7 @@
 
 setup() {
   load helpers/mock.sh
+  export PATH="$BATS_CWD:$PATH"
 }
 
 # Creates shell script that runs the specified rec file.
@@ -52,7 +53,7 @@ recording() {
 @test "should have working recording-demo.rec" {
   run bash -c "cd '$BATS_CWD' && bash '$(recording "recording-demo.rec" "$(asciinema_mock test.cast)" "$(svg-term_mock test.svg.0)")'"
 
-  assert_output --partial ' ℹ terminal profile search directory: rec'
+  assert_output --partial ' ℹ︎ terminal profile search directory: rec'
   assert_output --partial ' ✔ find_term_profile: terminal profile: rec/.itermcolors'
   assert_output --partial ' ● RECORDING: rec/demo.rec'
   assert_output --partial ' ● COMPLETED: docs/demo.svg'
@@ -62,7 +63,7 @@ recording() {
   run bash "$(recording "logr.rec")"
 
   assert_line '   ▔▔▔▔▔▔▔ LOGR DEMO'
-  assert_line ' ℹ Lorem ipsum dolor sit amet.'
+  assert_line ' ℹ︎ Lorem ipsum dolor sit amet.'
   assert_line ' ✔ 2 seconds of work'
   assert_line --partial 'Extracting link from sources and placing it in the top right corner. ↗︎'
   assert_line --partial ' … Cleaning up'
