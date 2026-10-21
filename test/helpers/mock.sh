@@ -7,6 +7,10 @@ asciinema_mock() {
   printf -v actions '%s\n' "$@"
   fixture=$(fixture "$fixture") || exit $?
   echo 'asciinema() {
+  if [ "$*" = "rec --help" ]; then
+    echo "Usage: asciinema rec [options] [filename]"
+    return 0
+  fi
   printenv > '"$BATS_TEST_TMPDIR"'/asciinema.env
   echo "$@" > '"$BATS_TEST_TMPDIR"'/asciinema.args
   local last_index=$#

@@ -89,10 +89,15 @@ runs:
         set_multiline_output() {
           local name=${1?name missing} && shift
           local value=$*
-          value="${value//'%'/'%25'}"
-          value="${value//$'\n'/'%0A'}"
-          value="${value//$'\r'/'%0D'}"
-          echo ::set-output name="$name"::"$value"
+          local delimiter=RECORDR_OUTPUT
+          while grep -Fxq "$delimiter" <<<"$value"; do
+            delimiter+="_"
+          done
+          {
+            printf '%s<<%s\n' "$name" "$delimiter"
+            printf '%s\n' "$value"
+            printf '%s\n' "$delimiter"
+          } >>"$GITHUB_OUTPUT"
         }
 
         declare -a input_files=()
@@ -118,7 +123,7 @@ runs:
             --hide-recording=${{ inputs.hide-recording }} \
             "${input_files[@]}"
         )
-        echo ::set-output name=status::"$?"
+        printf 'status=%s\n' "$?" >>"$GITHUB_OUTPUT"
         set_multiline_output files "${output_files-}"
 
         declare output_file_list=''
@@ -127,7 +132,7 @@ runs:
           [ ! "${output_file_list-}" ] || output_file_list+="${{ inputs.separator }}"
           output_file_list+="$output_file"
         done <<<"${output_files-}"
-        echo ::set-output name=file-list::"$output_file_list"
+        printf 'file-list=%s\n' "$output_file_list" >>"$GITHUB_OUTPUT"
 
         declare markdown=''
         while read -r output_file; do

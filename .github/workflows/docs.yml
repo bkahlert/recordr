@@ -7,7 +7,6 @@ on:
     paths-ignore: ['**.md','**.svg']
   pull_request:
     branches: ['master']
-    tags: ['dependencies']
     paths-ignore: ['**.md','**.svg']
   workflow_dispatch:
 
@@ -22,32 +21,34 @@ jobs:
     steps:
       - name: Prepare
         id: prep
+        env:
+          RECORDR_BRANCH: ${{ github.ref_name }}--docs
         run: |
-          echo ::set-output name=recordr-branch::"${{ github.ref_name }}--docs"
-          echo ::set-output name=recordr-build-dir::"build/rec"
+          printf 'recordr_branch=%s\n' "$RECORDR_BRANCH" >>"$GITHUB_OUTPUT"
+          printf 'recordr_build_dir=%s\n' build/rec >>"$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v7.0.1
 
       - name: ● REC
         if: github.event_name != 'pull_request'
         id: recordr
         uses: ./
         with:
-          branch: ${{ steps.prep.outputs.recordr-branch }}
-          build-dir: ${{ steps.prep.outputs.recordr-build-dir }}
+          branch: ${{ steps.prep.outputs.recordr_branch }}
+          build-dir: ${{ steps.prep.outputs.recordr_build_dir }}
 
       - name: Upload ● REC artifacts
-        uses: actions/upload-artifact@v4
-        if: success() || failure()
+        uses: actions/upload-artifact@v7.0.2
+        if: (success() || failure()) && github.event_name != 'pull_request'
         id: recordr-artifacts
         with:
           name: rec-artifacts
           if-no-files-found: error
-          path: ${{ steps.prep.outputs.recordr-build-dir }}
+          path: ${{ steps.prep.outputs.recordr_build_dir }}
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v4.0.1
+        uses: peter-evans/create-pull-request@v8.1.1
         if: startsWith(github.ref, 'refs/heads/')
         with:
           commit-message: |
@@ -58,4 +59,4 @@ jobs:
             Updates ${{ steps.recordr.outputs.file-list }}
             ${{ steps.recordr.outputs.markdown }}
           labels: recordr,docs,rec
-          branch: ${{ steps.prep.outputs.recordr-branch }}
+          branch: ${{ steps.prep.outputs.recordr_branch }}

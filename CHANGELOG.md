@@ -8,7 +8,7 @@
 
 ### Changed
 
-- use [Bats Wrapper GitHub action](https://github.com/marketplace/actions/bats-wrapper)
+*none*
 
 ### Deprecated
 
@@ -21,6 +21,21 @@
 ### Fixed
 
 *none*
+
+## [0.2.3] - 2026-10-21
+
+### Changed
+
+- use [Bats Wrapper GitHub action](https://github.com/marketplace/actions/bats-wrapper)
+- refresh container and GitHub Actions dependencies
+
+### Fixed
+
+- write Asciinema recordings as asciicast v2 for svg-term-cli compatibility
+- preserve visible recording output and the requested locale with Asciinema 3
+- render the info icon as text rather than emoji
+- write GitHub Action outputs through the supported output file
+- skip artifact upload when the docs workflow does not generate files
 
 ## [0.2.2] - 2021-12-10
 
@@ -52,7 +67,9 @@
 
 - `recordr` Bash script and Docker image that enables you to record scripted terminal sessions and convert them to SVG in a single step.
 
-[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.2...HEAD
+[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.3...HEAD
+
+[0.2.3]: https://github.com/bkahlert/recordr/compare/v0.2.2...v0.2.3
 
 [0.2.2]: https://github.com/bkahlert/recordr/compare/v0.2.1...v0.2.2
 

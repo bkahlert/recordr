@@ -4,6 +4,7 @@ setup() {
   load helpers/mock.sh
   load helpers/svg.sh
 
+  export PATH="$BATS_CWD:$PATH"
   cp "$BATS_CWD/logr.sh" "$BATS_TEST_TMPDIR"
   mkdir -p "${BATS_TEST_TMPDIR%/}/rec/bar"
   copy_fixture test.rec "${BATS_TEST_TMPDIR%/}/rec/foo.rec"
@@ -16,7 +17,7 @@ setup() {
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ recordings directory: rec"
+  assert_line " ℹ︎ recordings directory: rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ● RECORDING: rec/bar/baz.rec"
   assert_line " ◔ CONVERTING: build/rec/bar/baz.cast"
@@ -54,7 +55,7 @@ setup() {
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ recordings directory: rec"
+  assert_line " ℹ︎ recordings directory: rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ● RECORDING: rec/bar/baz.rec"
   assert_line " ◔ CONVERTING: build/rec/bar/baz.cast"
@@ -76,7 +77,7 @@ setup() {
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ recordings directory: rec"
+  assert_line " ℹ︎ recordings directory: rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ● RECORDING: rec/bar/baz.rec"
   assert_line " ◔ CONVERTING: build/rec/bar/baz.cast"
@@ -98,7 +99,7 @@ setup() {
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ recordings directory: rec"
+  assert_line " ℹ︎ recordings directory: rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ● RECORDING: rec/bar/baz.rec"
   assert_line " ◔ CONVERTING: build/rec/bar/baz.cast"
@@ -131,7 +132,7 @@ setup() {
   assert_failure
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ recordings directory: rec"
+  assert_line " ℹ︎ recordings directory: rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ✘ NOT FOUND: rec/rec/bar/baz.rec"
   assert_line " ◔ CONVERTING: build/rec/foo.cast"
@@ -243,7 +244,7 @@ setup() {
 @test "should log term-profile search dir" {
   copy_fixture .itermcolors rec
   run bash "$(mocked_recordr)" --build-dir . rec/foo.rec
-  assert_line " ℹ terminal profile search directory: rec"
+  assert_line " ℹ︎ terminal profile search directory: rec"
 }
 @test "should use any term-profile if multiple are found" {
   copy_fixture .itermcolors rec/foo.itermcolors

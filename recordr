@@ -25,7 +25,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-export RECORDR_VERSION=0.2.2
+export RECORDR_VERSION=0.2.3
 source logr.sh
 
 # An associative array of supported terminal profiles.
@@ -487,6 +487,12 @@ rec_to_recordable() {
   declare countdown_call="count_down ${opts['restart-delay']}"
   {
     echo '#!/usr/bin/env bash'
+    # Asciinema needs UTF-8, but recorded commands keep the caller's locale.
+    if [ "${LC_ALL+x}" ]; then
+      printf 'export LC_ALL=%q\n' "$LC_ALL"
+    else
+      echo 'unset LC_ALL'
+    fi
     [ ! "${opts['indicator']-}" ] || echo "export ${opts['indicator']}=1"
     [ ! "${opts['columns']-}" ] || [ ! "${opts['rows']-}" ] || printf "printf '\e[8;%d;%dt'\n" "${opts['rows']}" "${opts['columns']}"
     # language=sh
@@ -559,7 +565,19 @@ record() {
   local err_file="${target%.*}.asciinema"
   rec_to_recordable "$rec_file" "$recordable_file"
 
-  local -a asciinema_args=("rec")
+  local -a recorder=("asciinema") asciinema_args=("rec")
+  local asciinema_help
+  asciinema_help=$(asciinema rec --help) || logr error "could not inspect asciinema recording options"
+  if [[ "$asciinema_help" == *--output-format* ]]; then
+    asciinema_args+=("--output-format" "asciicast-v2")
+    asciinema_args+=("--window-size" "${opts['columns']}x${opts['rows']}")
+    if [ "${flags['hide-recording']:-false}" = true ]; then
+      asciinema_args+=("--headless")
+    elif [ ! -t 0 ]; then
+      # Asciinema 3 otherwise discards terminal output in headless mode.
+      recorder=("unbuffer" "sh" "-c" 'err_file=$1; shift; exec asciinema "$@" 2>"$err_file"' "recordr" "$err_file")
+    fi
+  fi
   asciinema_args+=("--command" "bash '$recordable_file'")
 
   [ ! "${DEBUG:-0}" = 0 ] || asciinema_args+=("--quiet")
@@ -571,9 +589,9 @@ record() {
   export TMPDIR
   (
     if [ "${flags['hide-recording']:-false}" = false ]; then
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} >&2 2>"$err_file"
+      LC_ALL=C.UTF-8 TERM=${opts['term']-} "${recorder[@]}" "${asciinema_args[@]}" >&2 2>"$err_file"
     else
-      TERM=${opts['term']-} asciinema ${asciinema_args[@]+"${asciinema_args[@]}"} >/dev/null 2>"$err_file"
+      LC_ALL=C.UTF-8 TERM=${opts['term']-} "${recorder[@]}" "${asciinema_args[@]}" >/dev/null 2>"$err_file"
     fi
   ) || {
     local asciinema_status=$? name="RECORDING" err_message indent

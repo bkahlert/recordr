@@ -46,7 +46,7 @@ actw() {
   opts+=("${wrapper_args[@]}")
   opts+=("--rm")
   opts+=("--name" "$wrapper_name--$(head /dev/urandom | LC_ALL=C.UTF-8 tr -dc A-Za-z0-9 2>/dev/null | head -c 3)")
-  opts+=("${ACTW_IMAGE:-efrecon/act:${ACTW_IMAGE_TAG:-v0.2.24}}")
+  opts+=("${ACTW_IMAGE:-efrecon/act:${ACTW_IMAGE_TAG:-v0.2.89}}")
 
   docker run \
     -e DEBUG="${DEBUG-}" \
@@ -95,32 +95,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7.0.1
       - name: ● REC
         id: recordr
         uses: ./
         with:
           files: rec/hello-world.rec
+      - name: Verify outputs
+        env:
+          STATUS: \${{ steps.recordr.outputs.status }}
+          FILES: \${{ steps.recordr.outputs.files }}
+          FILE_LIST: \${{ steps.recordr.outputs.file-list }}
+          MARKDOWN: \${{ steps.recordr.outputs.markdown }}
+        run: |
+          set -e
+          test "\$STATUS" = 0
+          test "\$FILES" = docs/hello-world.svg
+          test "\$FILE_LIST" = docs/hello-world.svg
+          [[ "\$MARKDOWN" == *'<summary>docs/hello-world.svg</summary>'* ]]
+          [[ "\$MARKDOWN" == *'../../raw/master/docs/hello-world.svg)'* ]]
+          printf '%s\n' 'Action outputs verified'
 WORKFLOW
 
   run act -j test
-  assert_output --partial '[test workflow/test]   ⚙  ::set-output:: status=0
-[test workflow/test]   ⚙  ::set-output:: files=docs/hello-world.svg
-[test workflow/test]   ⚙  ::set-output:: file-list=docs/hello-world.svg
-[test workflow/test]   ⚙  ::set-output:: markdown=<details>
-<summary>docs/hello-world.svg</summary>
-<h3>Preview</h3>'
-  assert_output --partial '[![description of the contents of hello-world](../raw/'
-  assert_output --partial '/docs/hello-world.svg "Title of Hello World")'
-  assert_output --partial '*Title of Hello World*](../raw/'
-  assert_output --partial '/docs/hello-world.svg)'
-  assert_output --partial '<h3>Markdown</h3>
-
-```markdown
-[![description of the contents of hello-world](docs/hello-world.svg "Title of Hello World")
-*Title of Hello World*](../../raw/master/docs/hello-world.svg)
-```
-
-</details>
-[test workflow/test]   ✅  Success - ● REC'
+  assert_success
+  assert_output --partial 'Action outputs verified'
 }
