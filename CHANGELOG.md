@@ -8,7 +8,8 @@
 
 ### Changed
 
-*none*
+- refresh Docker base image to `29.9.2-alpine3.24`
+- update documented GitHub Actions pins and output handling
 
 ### Deprecated
 

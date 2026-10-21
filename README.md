@@ -204,21 +204,23 @@ jobs:
     steps:
       - name: Prepare
         id: prep
+        env:
+          RECORDR_BRANCH: ${{ github.ref_name }}--docs
         run: |
-          echo ::set-output name=recordr-branch::"${{ github.ref_name }}--docs"
+          printf 'recordr_branch=%s\n' "$RECORDR_BRANCH" >>"$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7.0.1
 
       - name: ● REC terminal sessions
         if: github.event_name != 'pull_request'
         id: recordr
-        uses: bkahlert/recordr@v0.2.2
+        uses: bkahlert/recordr@v0.2.4
         with:
-          branch: ${{ steps.prep.outputs.recordr-branch }}
+          branch: ${{ steps.prep.outputs.recordr_branch }}
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v8.1.1
         if: startsWith(github.ref, 'refs/heads/')
         with:
           commit-message: |
