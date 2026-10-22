@@ -25,8 +25,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-(return 2>/dev/null) || set -- "$@" "-!-"
-
 # bashsupport disable=BP2001
 # Prints the escape sequences of the requested capabilities to STDERR.
 # Arguments:
@@ -1071,7 +1069,7 @@ main() {
   declare -r -g EX_CONFIG=78      # configuration error
 
   declare -r -g TMPDIR=${TMPDIR:-/tmp}
-  declare -r -g LOGR_VERSION=0.6.5
+  declare -r -g LOGR_VERSION=0.6.6
   declare -r -g BANR_CHAR=▔
   declare -r -g MARGIN='   '
   declare -r -g LF=$'\n'
@@ -1101,7 +1099,7 @@ main() {
     ['nested']="${esc_yellow-}❱$r"
     ['exit']="${esc_bold-}${esc_red-}↩$r"
     ['success']="${esc_green-}✔$r"
-    ['info']="${esc_white-}ℹ"$'\xEF\xB8\x8E'"$r"
+    ['info']="${esc_white-}ℹ$r"
     ['warning']="${esc_bold-}${esc_yellow-}!$r"
     ['error']="${esc_red-}✘$r"
     ['failure']="${esc_bold-}${esc_red-}ϟ$r"
@@ -1148,24 +1146,6 @@ main() {
   stty -echoctl 2>/dev/null || true # don't echo control characters in hat notation (e.g. `^C`)
 
   logr _init
-
-  [ ! "${RECORDING-}" ] || return "$EX_OK"
-  [[ " $* " == *" -!- "* ]] || return "$EX_OK"
-  [[ " $* " != *" -h "* ]] || logr _help
-  [[ " $* " != *" --help "* ]] || logr _help
-
-  logr error "execution detected" --usage "must be sourced at the top of your script in order to be used.
-
-$(
-    logr info "%s\n%s\n" "If logr is on your ${esc_bold-}\$PATH${esc_reset-} add:" \
-      "${esc_yellow-}"'source logr.sh'"${esc_reset-}"
-    logr info "%s\n%s\n" "To source logr from the ${esc_bold-}same directory as your script${esc_reset-} add:" \
-      "${esc_yellow-}"'source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/logr.sh"'"${esc_reset-}"
-    logr info "%s\n%s\n" "To source logr ${esc_bold-}relative to your script${esc_reset-} add:" \
-      "${esc_yellow-}"'source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/RELATIVE_PATH/logr.sh"'"${esc_reset-}"
-    logr info "%s\n%s\n" "And for the more adventurous:" \
-      "${esc_yellow-}"'source <(curl -LfsS https://git.io/logr.sh)'"${esc_reset-}"
-  )"
 }
 
-main "$@"
+main

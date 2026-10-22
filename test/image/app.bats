@@ -5,6 +5,11 @@ setup() {
   load ../helpers/svg.sh
 }
 
+@test "should package the repository logger unchanged" {
+  image --entrypoint cat "$BUILD_TAG" /usr/local/bin/logr.sh
+  assert_output "$(cat "$BATS_CWD/logr.sh")"
+}
+
 @test "should print help if specified" {
   mkdir rec
   image --stdout-only -i "$BUILD_TAG" --help
@@ -24,7 +29,7 @@ setup() {
   mkdir rec && copy_fixture test.rec rec && copy_fixture test.rec rec/test2.rec
   image "$BUILD_TAG"
   assert_line '●◕ BATCH PROCESSING'
-  assert_line ' ℹ︎ recordings directory: rec'
+  assert_line ' ℹ recordings directory: rec'
 }
 
 @test "should record all rec files in rec directory and convert them to svg in docs directory" {
@@ -33,9 +38,9 @@ setup() {
 
   assert_equal_svg_fixture test.svg docs/foo.svg
   assert_equal_svg_fixture test.svg docs/bar/baz.svg
-  assert_line " ℹ︎ terminal profile search directory: rec"
+  assert_line " ℹ terminal profile search directory: rec"
   assert_line "●◕ BATCH PROCESSING"
-  assert_line " ℹ︎ recordings directory: rec"
+  assert_line " ℹ recordings directory: rec"
   assert_line " ● RECORDING: rec/bar/baz.rec"
   assert_line " ● RECORDING: rec/foo.rec"
   assert_line " ◔ CONVERTING: build/rec/foo.cast"
@@ -66,9 +71,10 @@ setup() {
   assert_file_contains build/rec/test.cast recording-output-marker
 }
 
-@test "should render info icons using text presentation" {
+@test "should record info icons without a variation selector" {
   mkdir rec && echo 'source logr.sh; logr info recorded-info-marker' >rec/test.rec
   image "$BUILD_TAG" --restart-delay 0 rec/test.rec
   assert_line --partial recorded-info-marker
-  assert_file_contains docs/test.svg "ℹ︎"
+  assert_file_contains docs/test.svg "ℹ"
+  assert_file_not_contains docs/test.svg $'\xEF\xB8\x8E'
 }

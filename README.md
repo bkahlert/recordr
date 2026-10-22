@@ -316,6 +316,10 @@ framework [Bats](https://github.com/bats-core/bats-core).
 
 > 💡 To accelerate testing, the Bats Wrapper checks if any test is prefixed with a capital X and if so, only runs those tests.
 
+The checked-in [logr.sh](logr.sh) is shared by tests, the Logr demo, and container builds.
+To update it, replace the file with the `logr.sh` asset from the desired
+[Logr release](https://github.com/bkahlert/logr/releases), run the tests, and rebuild the container image.
+
 ## Troubleshooting
 
 - You might experience problems when converting very long or complex terminal sessions.   
