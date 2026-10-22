@@ -165,26 +165,26 @@ docker run -it --rm \
 
 ### Wrapper
 
-The Recordr Wrapper `recordrw` needs nothing but a working Docker installation and either [`curl`](https://curl.se/download.html)
+The Recordr Wrapper `recordrw` requires Bash 4.2 or newer on `PATH`, a working Docker installation, and either [`curl`](https://curl.se/download.html)
 , [`wget`](http://wget.addictivecode.org/FrequentlyAskedQuestions.html#download),
 or [`wget2`](https://gitlab.com/gnuwget/wget2#downloading-and-building-from-tarball):
 
 #### curl
 
 ```shell
-curl -LfsS https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+curl -LfsS https://git.io/recordrw | bash -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 ```
 
 #### wget
 
 ```shell
-wget -qO- https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+wget -qO- https://git.io/recordrw | bash -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 ```
 
 #### wget2
 
 ```shell
-wget2 -nv -O- https://git.io/recordrw | "$SHELL" -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
+wget2 -nv -O- https://git.io/recordrw | bash -s -- [OPTIONS] [DIR[/ ]FILE [FILE...]]
 ```
 
 ### GitHub Action
@@ -308,7 +308,7 @@ cd recordr
 
 # Use Bats wrapper to run tests
 curl -LfsS https://git.io/batsw \
-  | DOCKER_BAKE="--set '*.tags=test'" "$SHELL" -s -- --batsw:-e --batsw:BUILD_TAG=test test
+  | DOCKER_BAKE="--set '*.tags=test'" bash -s -- --batsw:-e --batsw:BUILD_TAG=test test
 ```
 
 [Bats Wrapper](https://github.com/bkahlert/bats-wrapper) is a self-contained wrapper to run tests based on the Bash testing
