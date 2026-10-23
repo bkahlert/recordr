@@ -229,7 +229,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: ● REC terminal sessions
-        uses: bkahlert/recordr@v0.2.5
+        uses: bkahlert/recordr@v0.2.6
         with:
           out-dir: build/pages
 

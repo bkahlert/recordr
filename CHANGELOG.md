@@ -22,6 +22,17 @@
 
 *none*
 
+## [0.2.6] - 2026-10-23
+
+### Changed
+
+- publish the latest SVG recordings through GitHub Pages instead of generated-file pull requests
+
+### Fixed
+
+- preserve Docker socket access and supplementary groups for the recording user
+- preserve the configured primary GID when application user and group names differ
+
 ## [0.2.5] - 2026-10-23
 
 ### Changed
@@ -86,7 +97,9 @@
 
 - `recordr` Bash script and Docker image that enables you to record scripted terminal sessions and convert them to SVG in a single step.
 
-[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.5...HEAD
+[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.6...HEAD
+
+[0.2.6]: https://github.com/bkahlert/recordr/compare/v0.2.5...v0.2.6
 
 [0.2.5]: https://github.com/bkahlert/recordr/compare/v0.2.4...v0.2.5
 
