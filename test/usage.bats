@@ -8,7 +8,7 @@ recordr() {
   run recordr --help
   assert_success
   assert_output --partial '
-   ▔▔▔▔▔▔▔ RECORDR 0.2.5
+   ▔▔▔▔▔▔▔ RECORDR 0.2.6
 
    Usage: recordr [OPTIONS] [DIR[/ ]FILE [FILE...]]
 
