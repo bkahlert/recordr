@@ -4,17 +4,17 @@
 
 **Recordr** lets you record terminal sessions and convert them to SVG.
 
-[![recorded terminal session demonstrating the recordr tool](docs/demo.svg "Recordr Demo")  
-*Recordr Demo*](../../raw/master/docs/demo.svg)
+[![recorded terminal session demonstrating the recordr tool](https://bkahlert.github.io/recordr/demo.svg "Recordr Demo")\
+*Recordr Demo*](https://bkahlert.github.io/recordr/demo.svg)
 
-[![recorded terminal session demonstrating the recordr tool recording the demo](docs/recording-demo.svg "Recordr recording the Recordr Demo")  
-*Recordr recording the Recordr Demo*](../../raw/master/docs/recording-demo.svg)
+[![recorded terminal session demonstrating the recordr tool recording the demo](https://bkahlert.github.io/recordr/recording-demo.svg "Recordr recording the Recordr Demo")\
+*Recordr recording the Recordr Demo*](https://bkahlert.github.io/recordr/recording-demo.svg)
 
-[![recorded terminal session demonstrating the logr logging library](docs/logr.svg "logr Demo")  
-*Recordr recording the logr Demo*](../../raw/master/docs/logr.svg)
+[![recorded terminal session demonstrating the logr logging library](https://bkahlert.github.io/recordr/logr.svg "logr Demo")\
+*Recordr recording the logr Demo*](https://bkahlert.github.io/recordr/logr.svg)
 
-[![recorded terminal session demonstrating the images to ANSI converter](docs/chafa.svg "chafa Demo")  
-*Recordr recording chafa converting Nyan Cat*](../../raw/master/docs/chafa.svg)
+[![recorded terminal session demonstrating the images to ANSI converter](https://bkahlert.github.io/recordr/chafa.svg "chafa Demo")\
+*Recordr recording chafa converting Nyan Cat*](https://bkahlert.github.io/recordr/chafa.svg)
 
 ## Bash script
 
@@ -191,53 +191,72 @@ wget2 -nv -O- https://git.io/recordrw | bash -s -- [OPTIONS] [DIR[/ ]FILE [FILE.
 
 Recordr can also be used to automatically convert your terminal sessions to SVG files as part of your workflow.
 
-The example below demonstrates how Recordr can be used to create a pull request containing all updated SVG files and 
-their preview to show up right inside the pull request's description.  
+The example below publishes the latest SVG files through GitHub Pages without committing generated files or creating pull requests.
+In **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source before the first deployment.
+Replace `master` with the repository's default branch.
 
 #### Usage Example
 
 ```yml
+name: docs
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: false
+
 jobs:
   docs:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Prepare
-        id: prep
-        env:
-          RECORDR_BRANCH: ${{ github.ref_name }}--docs
-        run: |
-          printf 'recordr_branch=%s\n' "$RECORDR_BRANCH" >>"$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
       - name: ● REC terminal sessions
-        if: github.event_name != 'pull_request'
-        id: recordr
         uses: bkahlert/recordr@v0.2.5
         with:
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          out-dir: build/pages
 
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v8.1.1
-        if: startsWith(github.ref, 'refs/heads/')
+      - name: Create site index
+        run: |
+          printf '%s\n' '<!doctype html>' '<title>Terminal recordings</title>' \
+            > build/pages/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6.0.0
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5.0.0
         with:
-          commit-message: |
-            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
-          title: |
-            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
-          body: |
-            Updates ${{ steps.recordr.outputs.file-list }}
-            ${{ steps.recordr.outputs.markdown }}
-          labels: recordr,docs,rec
-          branch: ${{ steps.prep.outputs.recordr-branch }}
+          path: build/pages
+
+      - name: Deploy recordings
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1
 ```
 
-All [described options](#usage) can be used to customize the conversion. Please consult [action.yml](action.yml) for detailed information. 
+Embed published animations using `https://OWNER.github.io/REPOSITORY/FILE.svg`.
+These URLs always serve the latest deployment, including from older README revisions.
+Each deployment replaces the published files; failed render jobs leave the previous deployment available.
 
-[![pull request created by GitHub action](docs/action/pull-request.png "Recordr GitHub Action")  
-*Recordr GitHub Action*](.github/workflows/docs.yml)
+All [described options](#usage) can be used to customize the conversion. Please consult [action.yml](action.yml) for detailed information.
+See [Recordr's publishing workflow](.github/workflows/docs.yml) for an example that builds its recording image from source and retains diagnostic artifacts.
 
 ## Image Configuration
 
