@@ -37,3 +37,18 @@ setup() {
   IMAGE_PGID="echo 2000" image "$BUILD_TAG" --build-dir /tmp --out-dir /tmp rec/test.rec
   assert_line --partial "> 2000 <"
 }
+
+@test "should preserve configured primary GID with a distinct application group name" {
+  IMAGE_PUID="echo 2000" IMAGE_PGID="echo 2001" image \
+    --entrypoint bash "$BUILD_TAG" -ec '
+      groupmod --new-name recording recordr
+      sed -i "s/app_group=recordr/app_group=recording/" /usr/local/sbin/entrypoint.sh
+      cat >/usr/local/bin/entrypoint_user.sh <<"CHECK"
+#!/usr/bin/env bash
+printf "recording uid=%s gid=%s\n" "$(id -u)" "$(id -g)"
+CHECK
+      exec /usr/local/sbin/entrypoint.sh
+    '
+
+  assert_line 'recording uid=2000 gid=2001'
+}
