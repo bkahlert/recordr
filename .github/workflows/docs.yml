@@ -3,60 +3,72 @@ name: docs
 on:
   push:
     branches: ['master']
-    tags: ['v*']
-    paths-ignore: ['**.md','**.svg']
-  pull_request:
-    branches: ['master']
     paths-ignore: ['**.md','**.svg']
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.ref }}--docs
-  cancel-in-progress: true
+  group: docs-pages
+  cancel-in-progress: false
 
 jobs:
-  docs:
+  render:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Prepare
-        id: prep
-        env:
-          RECORDR_BRANCH: ${{ github.ref_name }}--docs
-        run: |
-          printf 'recordr_branch=%s\n' "$RECORDR_BRANCH" >>"$GITHUB_OUTPUT"
-          printf 'recordr_build_dir=%s\n' build/rec >>"$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
+      - name: Build recording image
+        run: docker build --tag recordr:docs .
+
       - name: ● REC
-        if: github.event_name != 'pull_request'
         id: recordr
         uses: ./
+        env:
+          RECORDRW_IMAGE: recordr:docs
         with:
-          branch: ${{ steps.prep.outputs.recordr_branch }}
-          build-dir: ${{ steps.prep.outputs.recordr_build_dir }}
+          build-dir: build/rec
+          out-dir: build/pages
 
       - name: Upload ● REC artifacts
         uses: actions/upload-artifact@v7.0.2
-        if: (success() || failure()) && github.event_name != 'pull_request'
-        id: recordr-artifacts
+        if: success() || failure()
         with:
           name: rec-artifacts
-          if-no-files-found: error
-          path: ${{ steps.prep.outputs.recordr_build_dir }}
+          if-no-files-found: ignore
+          path: build/rec
 
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v8.1.1
-        if: startsWith(github.ref, 'refs/heads/')
+      - name: Create site index
+        run: |
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<title>Recordr recordings</title>' \
+            '<p>Terminal recordings for <a href="https://github.com/bkahlert/recordr">Recordr</a>.</p>' \
+            > build/pages/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5.0.0
         with:
-          commit-message: |
-            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
-          title: |
-            ${{ github.workflow }}(docs): update ${{ steps.recordr.outputs.file-list }}
-          body: |
-            Updates ${{ steps.recordr.outputs.file-list }}
-            ${{ steps.recordr.outputs.markdown }}
-          labels: recordr,docs,rec
-          branch: ${{ steps.prep.outputs.recordr_branch }}
+          path: build/pages
+
+  deploy:
+    needs: render
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v6.0.0
+
+      - name: Deploy recordings
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1

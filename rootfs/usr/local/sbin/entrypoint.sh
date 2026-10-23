@@ -12,13 +12,15 @@ fix_std_permissions() {
 # Arguments:
 #   1 - name of the group
 #   2 - ID of the group
+#   3 - name of the application user
 update_group_id() {
   local -r group=${1:?group missing}
   local -r -i gid=${2:?gid missing}
+  local -r user=${3:?user missing}
   [ "$gid" -eq "$gid" ] 2>/dev/null || logr error --code "$EX_DATAERR" "invalid group ID $gid"
-  if [ "$gid" ] && [ "$gid" != "$(id -g "${group}")" ]; then
+  if [ "$gid" ] && [ "$gid" != "$(id -g "${user}")" ]; then
     sed -i -e "s/^${group}:\([^:]*\):[0-9]*/${group}:\1:${gid}/" /etc/group
-    sed -i -e "s/^${group}:\([^:]*\):\([0-9]*\):[0-9]*/${group}:\1:\2:${gid}/" /etc/passwd
+    sed -i -e "s/^${user}:\([^:]*\):\([0-9]*\):[0-9]*/${user}:\1:\2:${gid}/" /etc/passwd
   fi
 }
 
@@ -33,6 +35,21 @@ update_user_id() {
   if [ "$uid" ] && [ "$uid" != "$(id -u "${user}")" ]; then
     sed -i -e "s/^${user}:\([^:]*\):[0-9]*:\([0-9]*\)/${user}:\1:${uid}:\2/" /etc/passwd
   fi
+}
+
+enable_docker_socket_access() {
+  local -r user=${1:?user missing} socket=/var/run/docker.sock
+  local socket_gid socket_group
+  [ -S "$socket" ] || return 0
+
+  socket_gid=$(stat -c '%g' "$socket") || return "$?"
+  if socket_group=$(getent group "$socket_gid"); then
+    socket_group=${socket_group%%:*}
+  else
+    socket_group="docker-$socket_gid"
+    groupadd --gid "$socket_gid" "$socket_group" || return "$?"
+  fi
+  usermod --append --groups "$socket_group" "$user"
 }
 
 # Fixes the home permissions for the specified user.
@@ -210,8 +227,9 @@ main() {
   [ "${DEBUG:-0}" = 0 ] || exec 3>&2
   {
     [ ! "${TZ-}" ] || logr task "updating timezone to $TZ" -- update_timezone "$TZ"
-    [ ! "${PGID-}" ] || logr task "updating ID of group $app_group to $PGID" -- update_group_id "$app_group" "$PGID"
+    [ ! "${PGID-}" ] || logr task "updating ID of group $app_group to $PGID" -- update_group_id "$app_group" "$PGID" "$app_user"
     [ ! "${PUID-}" ] || logr task "updating ID of user $app_user to $PUID" -- update_user_id "$app_user" "$PUID" || logr fail "failed to update ID of user $app_user to $PUID"
+    logr task "configuring Docker socket access for $app_user" -- enable_docker_socket_access "$app_user" || logr fail "failed to configure Docker socket access"
     logr task "fixing permissions of stdout and stderr" -- fix_std_permissions
     logr task "fixing permissions of home directory for $app_user" -- fix_home_permissions "$app_user"
     logr task "fixing permissions of .ssh directory for $app_user" -- fix_ssh_permissions "$app_user" "$app_group"
@@ -221,7 +239,8 @@ main() {
   } >&3
   exec 3>&-
 
-  exec yasu "$app_user:$app_group" entrypoint_user.sh "$@"
+  # An explicit group makes yasu discard supplementary groups.
+  exec yasu "$app_user" entrypoint_user.sh "$@"
 }
 
 main "$@"
