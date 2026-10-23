@@ -1,7 +1,6 @@
 FROM docker:29.9.2-alpine3.24
 
 # build time only options
-ARG LOGR_VERSION=0.6.5
 ARG SVG_TERM_CLI_VERSION=2.1.1
 ARG APP_USER=recordr
 ARG APP_GROUP=$APP_USER
@@ -33,15 +32,14 @@ RUN apk --no-cache --update add \
 # app setup
 COPY --from=crazymax/yasu:1.20.1 / /
 COPY rootfs /
-COPY recordr /usr/local/bin/
+COPY recordr logr.sh /usr/local/bin/
 RUN chmod +x \
     /usr/local/sbin/entrypoint.sh \
     /usr/local/bin/entrypoint_user.sh \
     /usr/local/bin/recordr \
  && sed -Ei -e "s/([[:space:]]app_user=)[^[:space:]]*/\1$APP_USER/" \
             -e "s/([[:space:]]app_group=)[^[:space:]]*/\1$APP_GROUP/" \
-             /usr/local/sbin/entrypoint.sh \
- && curl -LfsSo /usr/local/bin/logr.sh https://github.com/bkahlert/logr/releases/download/v${LOGR_VERSION}/logr.sh
+             /usr/local/sbin/entrypoint.sh
 
 # env setup
 ENV DEBUG="$DEBUG" \
