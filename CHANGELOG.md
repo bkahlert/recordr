@@ -22,6 +22,16 @@
 
 *none*
 
+## [0.2.5] - 2026-10-23
+
+### Changed
+
+- use the same vendored Logr v0.6.6 source in tests and container builds
+
+### Fixed
+
+- run the downloaded action wrapper with Bash regardless of its executable bit
+
 ## [0.2.4] - 2026-10-21
 
 ### Changed
@@ -76,7 +86,9 @@
 
 - `recordr` Bash script and Docker image that enables you to record scripted terminal sessions and convert them to SVG in a single step.
 
-[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.4...HEAD
+[unreleased]: https://github.com/bkahlert/recordr/compare/v0.2.5...HEAD
+
+[0.2.5]: https://github.com/bkahlert/recordr/compare/v0.2.4...v0.2.5
 
 [0.2.4]: https://github.com/bkahlert/recordr/compare/v0.2.3...v0.2.4
 
