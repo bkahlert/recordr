@@ -1,4 +1,4 @@
-FROM docker:29.9.2-alpine3.24
+FROM docker:29.9.3-alpine3.24
 
 # build time only options
 ARG SVG_TERM_CLI_VERSION=2.1.1
